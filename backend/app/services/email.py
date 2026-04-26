@@ -1,33 +1,20 @@
+import asyncio
+import json
 import logging
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-
-import aiosmtplib
-
-from app.config import get_settings
+import urllib.request
 
 logger = logging.getLogger(__name__)
 
+# Google Apps Script relay — Railway blocks outbound SMTP (port 587).
+# GAS sends the email from Google's infra via a deployed Apps Script web app.
+_GAS_URL = (
+    "https://script.google.com/macros/s/"
+    "AKfycbwl7zn7gRHTFS2eNFCP08b3iRMSFMYOyYIzGpRBi8kBVfQyTl4zIprbZqYxuzHQUWmQ/exec"
+)
 
-async def send_password_reset_email(to_email: str, reset_link: str) -> None:
-    settings = get_settings()
 
-    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-        logger.warning("SMTP not configured – skipping password reset email to %s", to_email)
-        return
-
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = "Скидання пароля – SportPredict AI"
-    msg["From"] = settings.SMTP_FROM or settings.SMTP_USER
-    msg["To"] = to_email
-
-    plain = (
-        f"Ви отримали цей лист, тому що надіслали запит на скидання пароля.\n\n"
-        f"Для скидання пароля перейдіть за посиланням:\n{reset_link}\n\n"
-        f"Посилання дійсне протягом 1 години.\n\n"
-        f"Якщо ви не надсилали цей запит – просто ігноруйте цей лист."
-    )
-
+def _send_via_gas(to_email: str, reset_link: str) -> None:
+    """Blocking HTTP POST to Google Apps Script email relay."""
     html = f"""
     <html>
       <body style="font-family: Arial, sans-serif; background: #f1f5f9; padding: 32px;">
@@ -53,20 +40,25 @@ async def send_password_reset_email(to_email: str, reset_link: str) -> None:
       </body>
     </html>
     """
+    payload = json.dumps({
+        "to": to_email,
+        "subject": "Скидання пароля – SportPredict AI",
+        "html": html,
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        _GAS_URL,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=20) as resp:
+        body = resp.read().decode("utf-8", errors="replace")
+    logger.info("Password-reset email sent to %s via GAS. Response: %s", to_email, body[:200])
 
-    msg.attach(MIMEText(plain, "plain"))
-    msg.attach(MIMEText(html, "html"))
 
+async def send_password_reset_email(to_email: str, reset_link: str) -> None:
+    loop = asyncio.get_event_loop()
     try:
-        await aiosmtplib.send(
-            msg,
-            hostname=settings.SMTP_HOST,
-            port=settings.SMTP_PORT,
-            username=settings.SMTP_USER,
-            password=settings.SMTP_PASSWORD,
-            start_tls=True,
-        )
-        logger.info("Password reset email sent to %s", to_email)
+        await loop.run_in_executor(None, _send_via_gas, to_email, reset_link)
     except Exception as exc:
-        logger.error("Failed to send password reset email to %s: %s", to_email, exc)
-        raise
+        logger.error("Failed to send password reset email to %s via GAS: %s", to_email, exc)
