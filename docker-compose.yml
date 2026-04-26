@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: sports_predict_db
+    environment:
+      POSTGRES_DB: sports_predict
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: sports_predict_backend
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/sports_predict
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      AUTO_SYNC_REAL_DATA: "true"
+      AUTO_SYNC_FOOTBALL_DATA: "false"
+      AUTO_SIMULATE_PAST_MATCHES: "true"
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: "587"
+      SMTP_USER: a7654837383@gmail.com
+      SMTP_PASSWORD: blvfaosihqqtuzmo
+      SMTP_FROM: a7654837383@gmail.com
+      FRONTEND_URL: http://localhost:5173
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    working_dir: /app
+    command: >
+      sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: sports_predict_frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  pgdata:
