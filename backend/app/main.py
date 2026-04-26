@@ -59,27 +59,28 @@ async def lifespan(app: FastAPI):
         await ensure_default_sports(db)
         await db.commit()
 
-    # 2. Sync data once if DB is empty
-    if settings.AUTO_SYNC_FOOTBALL_DATA:
-        async with async_session() as db:
-            match_count = await db.execute(select(func.count(Match.id)))
-            if (match_count.scalar() or 0) == 0:
-                imported = await import_from_football_data(
-                    db,
-                    reset_existing=False,
-                    min_season_code=settings.FOOTBALL_DATA_MIN_SEASON,
-                    max_links=settings.FOOTBALL_DATA_MAX_LINKS,
-                )
-                logger.info(f"[Startup] football-data synced: {imported}")
-    elif settings.AUTO_SYNC_REAL_DATA:
-        async with async_session() as db:
-            match_count = await db.execute(select(func.count(Match.id)))
-            if (match_count.scalar() or 0) == 0:
-                imported = await import_real_data(db, reset_existing=False)
-                logger.info(f"[Startup] Real data synced: {imported}")
+    # 2. Sync data once if DB is empty — run in background so startup is not blocked
+    async def _bg_import():
+        if settings.AUTO_SYNC_FOOTBALL_DATA:
+            async with async_session() as db:
+                match_count = await db.execute(select(func.count(Match.id)))
+                if (match_count.scalar() or 0) == 0:
+                    imported = await import_from_football_data(
+                        db,
+                        reset_existing=False,
+                        min_season_code=settings.FOOTBALL_DATA_MIN_SEASON,
+                        max_links=settings.FOOTBALL_DATA_MAX_LINKS,
+                    )
+                    logger.info(f"[Startup] football-data synced: {imported}")
+        elif settings.AUTO_SYNC_REAL_DATA:
+            async with async_session() as db:
+                match_count = await db.execute(select(func.count(Match.id)))
+                if (match_count.scalar() or 0) == 0:
+                    imported = await import_real_data(db, reset_existing=False)
+                    logger.info(f"[Startup] Real data synced: {imported}")
 
     # 3. Optional background loops
-    background_tasks = []
+    background_tasks = [asyncio.create_task(_bg_import())]
     if settings.AUTO_SIMULATE_PAST_MATCHES:
         completed = await complete_past_matches(batch=200)
         if completed:
