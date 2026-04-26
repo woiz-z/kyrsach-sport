@@ -76,8 +76,11 @@ async def lifespan(app: FastAPI):
             async with async_session() as db:
                 match_count = await db.execute(select(func.count(Match.id)))
                 if (match_count.scalar() or 0) == 0:
-                    imported = await import_real_data(db, reset_existing=False)
-                    logger.info(f"[Startup] Real data synced: {imported}")
+                    try:
+                        imported = await import_real_data(db, reset_existing=False)
+                        logger.info(f"[Startup] Real data synced: {imported}")
+                    except Exception as exc:
+                        logger.error(f"[Startup] Real data import failed: {exc}")
 
     # 3. Optional background loops
     background_tasks = [asyncio.create_task(_bg_import())]

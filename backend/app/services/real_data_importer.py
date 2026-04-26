@@ -964,8 +964,15 @@ async def import_real_data(db: AsyncSession, reset_existing: bool = False) -> di
             f"new={summary['new_matches_added']} errors={len((summary['quality'] or {}).get('provider_errors') or [])}"
         )
 
-    await _rebuild_stats_and_h2h(db)
+    # Commit teams/matches immediately so data is visible even if stats rebuild is slow
     await db.commit()
+
+    try:
+        await _rebuild_stats_and_h2h(db)
+        await db.commit()
+    except Exception as exc:
+        print(f"[Import] stats rebuild failed (data still saved): {exc}")
+        await db.rollback()
 
     all_matches = (await db.execute(select(Match))).scalars().all()
     completed = [m for m in all_matches if m.status == MatchStatus.completed]
