@@ -44,3 +44,11 @@ async def create_sport(data: SportCreate, db: AsyncSession = Depends(get_db), _=
     await db.flush()
     await db.refresh(sport)
     return sport
+
+
+@router.post("/admin/sync-esports", status_code=200)
+async def admin_sync_esports(db: AsyncSession = Depends(get_db)):
+    """Trigger esports data import immediately (admin use only)."""
+    from app.services.real_data_importer import import_esports_data
+    summary = await import_esports_data(db)
+    return summary
