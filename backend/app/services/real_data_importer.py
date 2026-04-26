@@ -601,7 +601,11 @@ _ESPORTS_FALLBACK_MATCHES = [
 
 
 async def _import_vlr_esports_fallback(db: AsyncSession, sport: Sport, league_name: str, quality: dict) -> int:
-    """Create a sample Valorant dataset when the VLR API is unreachable."""
+    """Create a sample Valorant dataset when the VLR API is unreachable.
+
+    Uses deterministic fixed timestamps so _upsert_match can deduplicate on
+    repeated calls (background retry loop won't inflate stats).
+    """
     season_code = _season_code_from_datetime(datetime.utcnow())
     season = await _get_or_create_season(db, sport.id, league_name, season_code)
 
@@ -611,7 +615,8 @@ async def _import_vlr_esports_fallback(db: AsyncSession, sport: Sport, league_na
         teams_map[name] = team
 
     imported = 0
-    base_dt = datetime.utcnow() - timedelta(days=60)
+    # Fixed base date (deterministic) so _upsert_match deduplicates on re-runs
+    base_dt = datetime(2025, 3, 1, 12, 0, 0)
     for idx, (home_name, away_name, score1, score2) in enumerate(_ESPORTS_FALLBACK_MATCHES):
         home_team = teams_map[home_name]
         away_team = teams_map[away_name]

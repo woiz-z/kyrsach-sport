@@ -198,6 +198,10 @@ async def run_esports_import_retry_loop(initial_delay: int = 45, max_delay: int 
                 # Healthy state: keep refreshing but less aggressively.
                 delay = max(300, initial_delay)
                 sleep_for = delay
+            elif any("used_fallback" in e for e in errors):
+                # Fallback data was seeded — back off aggressively, no need to spam.
+                sleep_for = max_delay
+                delay = max_delay
             elif added > 0:
                 # Made progress, try again soon.
                 delay = max(10, initial_delay)
