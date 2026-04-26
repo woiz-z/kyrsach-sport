@@ -44,6 +44,7 @@ def _send_via_gas(to_email: str, reset_link: str) -> None:
         "to": to_email,
         "subject": "Скидання пароля – SportPredict AI",
         "html": html,
+        "secret": "WORKHIVE_SECRET_2026",
     }).encode("utf-8")
     req = urllib.request.Request(
         _GAS_URL,
