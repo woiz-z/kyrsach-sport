@@ -137,11 +137,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          {!isRegister && (
-            <div className="mt-4 p-3 bg-slate-50 rounded-xl text-xs text-slate-500 text-center">
-              Демо: <span className="font-mono">admin / admin123</span>
-            </div>
-          )}
+
         </div>
       </div>
     </div>
