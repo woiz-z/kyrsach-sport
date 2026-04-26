@@ -59,6 +59,15 @@ async def lifespan(app: FastAPI):
         await ensure_default_sports(db)
         await db.commit()
 
+    # Backfill NULL created_at for any users that were inserted without it
+    from sqlalchemy import update, text as sa_text
+    from app.models.models import User as UserModel
+    from datetime import datetime as _dt
+    async with engine.begin() as conn:
+        await conn.execute(
+            sa_text("UPDATE users SET created_at = NOW() WHERE created_at IS NULL")
+        )
+
     # 2. Sync data once if DB is empty — run in background so startup is not blocked
     async def _bg_import():
         if settings.AUTO_SYNC_FOOTBALL_DATA:

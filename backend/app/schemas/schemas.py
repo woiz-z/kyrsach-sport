@@ -41,7 +41,7 @@ class UserResponse(BaseModel):
     username: str
     email: str
     role: UserRoleEnum
-    created_at: datetime
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
