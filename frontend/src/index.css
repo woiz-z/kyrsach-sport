@@ -17,6 +17,18 @@
   --font-sans: 'Manrope', system-ui, -apple-system, sans-serif;
 }
 
+/* Hide browser native password reveal/credential buttons */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+input::-webkit-credentials-auto-fill-button,
+input::-webkit-strong-password-auto-fill-button {
+  display: none !important;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 body {
   font-family: var(--font-sans);
   background: radial-gradient(circle at top left, #dbeafe 0%, #f8fafc 42%, #eef2ff 100%);
