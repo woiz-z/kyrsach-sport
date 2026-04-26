@@ -899,6 +899,7 @@ async def _import_sport_dataset(db: AsyncSession, config: SportImportConfig) -> 
 
     return {
         "sport": config.sport_name,
+        "sport_db_id": sport.id,
         "league": league_name,
         "teams": team_count,
         "matches": match_count,
@@ -907,12 +908,33 @@ async def _import_sport_dataset(db: AsyncSession, config: SportImportConfig) -> 
     }
 
 
-async def _rebuild_stats_and_h2h(db: AsyncSession) -> None:
-    await db.execute(delete(TeamStatistics))
-    await db.execute(delete(HeadToHead))
+async def _rebuild_stats_and_h2h(db: AsyncSession, sport_id: Optional[int] = None) -> None:
+    """Recompute TeamStatistics and HeadToHead from completed matches.
 
-    seasons = (await db.execute(select(Season))).scalars().all()
-    teams = (await db.execute(select(Team))).scalars().all()
+    If sport_id is given, only the specified sport's records are rebuilt,
+    leaving other sports untouched. This is much faster for targeted imports.
+    """
+    if sport_id is not None:
+        # Delete only this sport's TeamStatistics (joined via Team.sport_id)
+        sport_team_ids_q = select(Team.id).where(Team.sport_id == sport_id)
+        await db.execute(
+            delete(TeamStatistics).where(TeamStatistics.team_id.in_(sport_team_ids_q))
+        )
+        sport_h2h_ids_q_1 = select(Team.id).where(Team.sport_id == sport_id)
+        sport_h2h_ids_q_2 = select(Team.id).where(Team.sport_id == sport_id)
+        await db.execute(
+            delete(HeadToHead).where(
+                HeadToHead.team1_id.in_(sport_h2h_ids_q_1)
+                | HeadToHead.team2_id.in_(sport_h2h_ids_q_2)
+            )
+        )
+        seasons = (await db.execute(select(Season).where(Season.sport_id == sport_id))).scalars().all()
+        teams = (await db.execute(select(Team).where(Team.sport_id == sport_id))).scalars().all()
+    else:
+        await db.execute(delete(TeamStatistics))
+        await db.execute(delete(HeadToHead))
+        seasons = (await db.execute(select(Season))).scalars().all()
+        teams = (await db.execute(select(Team))).scalars().all()
 
     for season in seasons:
         season_teams = [t for t in teams if t.sport_id == season.sport_id]
@@ -1075,6 +1097,21 @@ async def import_esports_data(db: AsyncSession) -> dict:
         return {"sport": "Кіберспорт", "error": "esports_config_missing"}
 
     summary = await _import_sport_dataset(db, esports_config)
-    await _rebuild_stats_and_h2h(db)
     await db.commit()
+
+    # Rebuild stats only for esports — much faster than full rebuild
+    sport_id = summary.get("sport_db_id")
+    if sport_id is None:
+        # Fetch the id from DB by name
+        from sqlalchemy import select as _select
+        from app.models.models import Sport as _Sport
+        r = await db.execute(_select(_Sport).where(_Sport.name == esports_config.sport_name))
+        sp = r.scalar_one_or_none()
+        if sp:
+            sport_id = sp.id
+
+    if sport_id:
+        await _rebuild_stats_and_h2h(db, sport_id=sport_id)
+        await db.commit()
+
     return summary
