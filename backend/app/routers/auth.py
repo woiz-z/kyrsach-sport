@@ -71,7 +71,7 @@ async def forgot_password(
     user = result.scalar_one_or_none()
     if user:
         token_value = secrets.token_urlsafe(48)
-        expires = datetime.now(timezone.utc) + timedelta(hours=1)
+        expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)
         reset_token = PasswordResetToken(
             user_id=user.id,
             token=token_value,
