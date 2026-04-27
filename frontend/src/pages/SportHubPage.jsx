@@ -17,20 +17,19 @@ export default function SportHubPage() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-cyan-200 bg-gradient-to-r from-cyan-500 to-blue-500 p-6 text-white shadow-lg shadow-cyan-500/20">
-        <div className="flex items-center gap-2 text-cyan-100">
-          <Sparkles className="h-5 w-5" />
+      <div className="rounded-2xl p-6 text-white" style={{ background: 'linear-gradient(135deg, #0D1B2E 0%, #1D4ED8 50%, #0891B2 100%)', border: '1px solid rgba(59,130,246,0.3)', boxShadow: '0 8px 32px rgba(29,78,216,0.3)' }}>
+        <div className="flex items-center gap-2 text-blue-200 text-sm mb-2">
+          <Sparkles className="h-4 w-4" />
           Multi-Sport Intelligence
         </div>
-        <h1 className="mt-2 text-3xl font-black">Sport Hub</h1>
-        <p className="mt-2 max-w-2xl text-cyan-50">
-          Огляд усіх видів спорту з єдиним AI-ядром прогнозування. Оберіть категорію,
-          щоб перейти до матчів, команд та аналітики.
+        <h1 className="mt-1 text-3xl font-black">Sport Hub</h1>
+        <p className="mt-2 max-w-2xl text-blue-100 text-sm">
+          Огляд усіх видів спорту з єдиним AI-ядром прогнозування.
         </p>
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+        <div className="rounded-xl px-4 py-3 text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#FCA5A5' }}>
           {error}
         </div>
       )}
@@ -40,14 +39,15 @@ export default function SportHubPage() {
           <Link
             key={sport.id}
             to={`/matches?sport=${sport.id}`}
-            className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+            className="glass-card p-5 transition-all hover:border-blue-500/20 group"
+            style={{ display: 'block' }}
           >
             <div className="flex items-center justify-between">
-              <div className="text-4xl">{sport.icon || '🏟️'}</div>
-              <ArrowRight className="h-5 w-5 text-slate-400 transition-colors group-hover:text-cyan-600" />
+              <div className="text-4xl">{sport.icon || '🏟'}</div>
+              <ArrowRight className="h-5 w-5 transition-colors" style={{ color: '#3d6080' }} />
             </div>
-            <h2 className="mt-3 text-xl font-bold text-slate-900">{sport.name}</h2>
-            <p className="mt-1 text-sm text-slate-500">{sport.description || 'Спортивна категорія'}</p>
+            <h2 className="mt-3 text-lg font-bold text-white group-hover:text-blue-400 transition-colors">{sport.name}</h2>
+            <p className="mt-1 text-sm" style={{ color: '#5a7a9a' }}>{sport.description || 'Спортивна категорія'}</p>
           </Link>
         ))}
       </div>

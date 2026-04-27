@@ -5,9 +5,13 @@ export default function SportBadge({ sportName, icon, className = '' }) {
   const resolvedIcon = icon || meta.icon;
 
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 ${className}`}>
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold shrink-0 ${className}`}
+      style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', color: '#93C5FD' }}
+    >
       <span>{resolvedIcon}</span>
       <span>{sportName || meta.name}</span>
     </span>
   );
 }
+

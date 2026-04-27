@@ -33,33 +33,33 @@ export default function TeamsPage() {
 
   if (loading) return (
     <div className="flex justify-center py-20">
-      <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+      <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(59,130,246,0.2)', borderTopColor: '#3B82F6' }} />
     </div>
   );
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Команди</h1>
+        <h1 className="text-2xl font-bold text-white">Команди</h1>
       </div>
 
       {/* Filters */}
       <div className="flex gap-4">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#3d6080' }} />
           <input
             type="text"
             placeholder="Пошук команди..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            className="dark-input w-full pl-10 pr-4 py-2.5 text-sm"
           />
         </div>
         {sports.length > 1 && (
           <select
             value={sportFilter}
             onChange={e => setSportFilter(e.target.value)}
-            className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            className="dark-input px-4 py-2.5 text-sm"
           >
             <option value="">Усі види спорту</option>
             {sports.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -68,41 +68,42 @@ export default function TeamsPage() {
       </div>
 
       {error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+        <div className="rounded-xl px-4 py-3 text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#FCA5A5' }}>{error}</div>
       ) : (
         <>
-          {/* Team Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map(team => (
               <Link
                 key={team.id}
                 to={`/teams/${team.id}`}
-                className="group bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:border-blue-200 hover:shadow-md transition-all"
+                className="glass-card p-5 hover:border-blue-500/20 transition-all group"
+                style={{ display: 'block' }}
               >
                 <div className="flex items-start gap-4">
                   {team.logo_url ? (
                     <img
                       src={team.logo_url}
                       alt={team.name}
-                      className="w-16 h-16 rounded-2xl object-contain bg-slate-50 border border-slate-100 shrink-0"
+                      className="w-14 h-14 rounded-xl object-contain shrink-0"
+                      style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)' }}
                     />
                   ) : (
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center text-white text-2xl font-bold shrink-0">
+                    <div className="w-14 h-14 rounded-xl flex items-center justify-center text-white text-xl font-bold shrink-0" style={{ background: 'linear-gradient(135deg, #1D4ED8, #10B981)' }}>
                       {team.name.charAt(0)}
                     </div>
                   )}
 
                   <div className="min-w-0">
-                    <h3 className="font-bold text-slate-800 group-hover:text-blue-600 transition-colors truncate">
+                    <h3 className="font-bold text-white group-hover:text-blue-400 transition-colors truncate">
                       {team.name}
                     </h3>
                     {team.city && (
-                      <p className="text-sm text-slate-500 flex items-center gap-1 mt-1">
+                      <p className="text-sm flex items-center gap-1 mt-1" style={{ color: '#5a7a9a' }}>
                         <MapPin className="w-3.5 h-3.5" /> {team.city}
                       </p>
                     )}
                     {team.founded_year && (
-                      <p className="text-sm text-slate-400 flex items-center gap-1 mt-1">
+                      <p className="text-sm flex items-center gap-1 mt-1" style={{ color: '#3d6080' }}>
                         <Trophy className="w-3.5 h-3.5" /> Засн. {team.founded_year}
                       </p>
                     )}
@@ -113,7 +114,7 @@ export default function TeamsPage() {
           </div>
 
           {filtered.length === 0 && (
-            <div className="text-center py-12 text-slate-400">
+            <div className="text-center py-12 text-sm" style={{ color: '#5a7a9a' }}>
               Команди не знайдено
             </div>
           )}

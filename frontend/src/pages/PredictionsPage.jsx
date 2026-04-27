@@ -21,51 +21,52 @@ export default function PredictionsPage() {
 
   if (loading) return (
     <div className="flex justify-center py-20">
-      <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+      <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(59,130,246,0.2)', borderTopColor: '#3B82F6' }} />
     </div>
   );
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Прогнози</h1>
-        <span className="text-sm text-slate-500">{predictions.length} прогнозів</span>
+        <h1 className="text-2xl font-bold text-white">Прогнози</h1>
+        <span className="text-sm" style={{ color: '#5a7a9a' }}>{predictions.length} прогнозів</span>
       </div>
 
       {error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+        <div className="rounded-xl px-4 py-3 text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#FCA5A5' }}>{error}</div>
       ) : predictions.length === 0 ? (
         <div className="text-center py-16">
-          <Brain className="w-12 h-12 mx-auto text-slate-300 mb-3" />
-          <p className="text-slate-500">Прогнозів поки немає</p>
-          <Link to="/matches" className="inline-block mt-3 text-sm text-blue-600 hover:underline">
+          <Brain className="w-12 h-12 mx-auto mb-3" style={{ color: '#3d6080' }} />
+          <p style={{ color: '#5a7a9a' }}>Прогнозів поки немає</p>
+          <Link to="/matches" className="inline-block mt-3 text-sm text-blue-400 hover:underline">
             Перейти до матчів →
           </Link>
         </div>
       ) : (
         <div className="space-y-3">
           {predictions.map(pred => (
-            <div key={pred.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div key={pred.id} className="glass-card overflow-hidden">
               <div
-                className="flex items-center justify-between p-5 cursor-pointer hover:bg-slate-50 transition-colors"
+                className="flex items-center justify-between p-5 cursor-pointer transition-colors"
+                style={{  }}
                 onClick={() => setExpanded(expanded === pred.id ? null : pred.id)}
               >
                 <div className="flex items-center gap-4 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg,#1D4ED8,#10B981)' }}>
                     <Brain className="w-5 h-5 text-white" />
                   </div>
                   <div className="min-w-0">
-                    <p className="font-semibold text-slate-800 truncate">
+                    <p className="font-semibold text-white truncate">
                       {pred.match?.home_team?.name && pred.match?.away_team?.name
                         ? `${pred.match.home_team.name} vs ${pred.match.away_team.name}`
                         : `Матч #${pred.match_id}`}
                     </p>
-                    <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
+                    <div className="flex items-center gap-3 text-xs mt-1" style={{ color: '#5a7a9a' }}>
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
                         {new Date(pred.created_at).toLocaleString('uk-UA')}
                       </span>
-                      <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded">
+                      <span className="font-mono px-1.5 py-0.5 rounded" style={{ background: 'rgba(59,130,246,0.1)', color: '#60a5fa' }}>
                         {pred.model_name}
                       </span>
                     </div>
@@ -77,34 +78,32 @@ export default function PredictionsPage() {
                   <ResultBadge result={pred.predicted_result} />
                   <ConfidenceCircle value={pred.confidence} />
                   {expanded === pred.id
-                    ? <ChevronUp className="w-5 h-5 text-slate-400" />
-                    : <ChevronDown className="w-5 h-5 text-slate-400" />
+                    ? <ChevronUp className="w-5 h-5" style={{ color: '#5a7a9a' }} />
+                    : <ChevronDown className="w-5 h-5" style={{ color: '#5a7a9a' }} />
                   }
                 </div>
               </div>
 
               {expanded === pred.id && (
-                <div className="px-5 pb-5 border-t border-slate-100 pt-4 space-y-4">
-                  {/* Probabilities */}
+                <div className="px-5 pb-5 pt-4 space-y-4" style={{ borderTop: '1px solid rgba(148,200,255,0.08)' }}>
                   <div className={`grid gap-3 ${pred.draw_prob > 0 ? 'grid-cols-3' : 'grid-cols-2'}`}>
                     <ProbCard label="Перемога госп." pct={pred.home_win_prob * 100} color="emerald" />
                     {pred.draw_prob > 0 && <ProbCard label="Нічия" pct={pred.draw_prob * 100} color="amber" />}
                     <ProbCard label="Перемога гост." pct={pred.away_win_prob * 100} color="red" />
                   </div>
 
-                  {/* AI Analysis */}
                   {pred.ai_analysis && !pred.ai_analysis.startsWith('AI-аналіз недоступний') && (
-                    <div className="p-4 bg-gradient-to-r from-blue-50 to-emerald-50 rounded-xl border border-blue-100">
-                      <h4 className="text-sm font-bold text-blue-800 mb-2 flex items-center gap-2">
+                    <div className="p-4 rounded-xl" style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)' }}>
+                      <h4 className="text-sm font-bold text-blue-400 mb-2 flex items-center gap-2">
                         <Brain className="w-4 h-4" /> AI Аналіз
                       </h4>
-                      <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{pred.ai_analysis}</p>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: '#93C5FD' }}>{pred.ai_analysis}</p>
                     </div>
                   )}
 
                   <Link
                     to={`/matches/${pred.match_id}`}
-                    className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
+                    className="inline-flex items-center gap-1 text-sm text-blue-400 hover:underline"
                   >
                     <TrendingUp className="w-4 h-4" /> Переглянути матч →
                   </Link>
@@ -120,38 +119,39 @@ export default function PredictionsPage() {
 
 function IsCorrectBadge({ value }) {
   if (value === true) return (
-    <span className="px-2.5 py-1 rounded-lg text-xs font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200">Вірно ✓</span>
+    <span className="px-2.5 py-1 rounded-lg text-xs font-semibold" style={{ background: 'rgba(16,185,129,0.15)', color: '#10B981', border: '1px solid rgba(16,185,129,0.3)' }}>Вірно ✓</span>
   );
   if (value === false) return (
-    <span className="px-2.5 py-1 rounded-lg text-xs font-semibold border bg-red-50 text-red-700 border-red-200">Невірно ✗</span>
+    <span className="px-2.5 py-1 rounded-lg text-xs font-semibold" style={{ background: 'rgba(239,68,68,0.15)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.3)' }}>Невірно ✗</span>
   );
   return (
-    <span className="px-2.5 py-1 rounded-lg text-xs font-semibold border bg-slate-50 text-slate-500 border-slate-200">Очікується</span>
+    <span className="px-2.5 py-1 rounded-lg text-xs font-semibold" style={{ background: 'rgba(148,200,255,0.08)', color: '#5a7a9a', border: '1px solid rgba(148,200,255,0.1)' }}>Очікується</span>
   );
 }
 
 function ProbCard({ label, pct, color }) {
   const colorMap = {
-    emerald: 'text-emerald-600 bg-emerald-50 border-emerald-100',
-    amber: 'text-amber-600 bg-amber-50 border-amber-100',
-    red: 'text-red-600 bg-red-50 border-red-100',
+    emerald: { color: '#10B981', bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.2)' },
+    amber:   { color: '#F59E0B', bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.2)' },
+    red:     { color: '#EF4444', bg: 'rgba(239,68,68,0.1)',  border: 'rgba(239,68,68,0.2)' },
   };
+  const c = colorMap[color];
   return (
-    <div className={`text-center p-3 rounded-xl border ${colorMap[color]}`}>
-      <p className="text-2xl font-bold">{pct.toFixed(1)}%</p>
-      <p className="text-xs mt-1">{label}</p>
+    <div className="text-center p-3 rounded-xl" style={{ background: c.bg, border: `1px solid ${c.border}` }}>
+      <p className="text-2xl font-bold" style={{ color: c.color }}>{pct.toFixed(1)}%</p>
+      <p className="text-xs mt-1" style={{ color: '#5a7a9a' }}>{label}</p>
     </div>
   );
 }
 
 function ResultBadge({ result }) {
   const cfg = {
-    home_win: { label: 'Госп.', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-    away_win: { label: 'Гост.', cls: 'bg-red-50 text-red-700 border-red-200' },
-    draw: { label: 'Нічия', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+    home_win: { label: 'Госп.', color: '#10B981', bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.3)' },
+    away_win: { label: 'Гост.', color: '#EF4444', bg: 'rgba(239,68,68,0.15)', border: 'rgba(239,68,68,0.3)' },
+    draw:     { label: 'Нічия', color: '#F59E0B', bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.3)' },
   };
   const c = cfg[result] || cfg.draw;
-  return <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold border ${c.cls}`}>{c.label}</span>;
+  return <span className="px-2.5 py-1 rounded-lg text-xs font-semibold" style={{ background: c.bg, color: c.color, border: `1px solid ${c.border}` }}>{c.label}</span>;
 }
 
 function ConfidenceCircle({ value }) {
@@ -160,12 +160,12 @@ function ConfidenceCircle({ value }) {
     <div className="relative w-10 h-10">
       <svg className="w-10 h-10 -rotate-90" viewBox="0 0 36 36">
         <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-          fill="none" stroke="#e2e8f0" strokeWidth="3" />
+          fill="none" stroke="rgba(59,130,246,0.15)" strokeWidth="3" />
         <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
           fill="none" stroke="#3b82f6" strokeWidth="3"
           strokeDasharray={`${pct}, 100`} />
       </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-blue-600">
+      <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold" style={{ color: '#60a5fa' }}>
         {pct}%
       </span>
     </div>
