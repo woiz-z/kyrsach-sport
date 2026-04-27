@@ -2,15 +2,17 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import Sidebar from './Sidebar';
+import AnimatedBackground from './AnimatedBackground';
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-[#060E1C]">
+      <AnimatedBackground />
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-white/[0.06] bg-[#060E1C]/80 px-4 py-3 backdrop-blur md:hidden">
+      <header className="relative z-30 sticky top-0 flex items-center justify-between border-b border-white/[0.06] bg-[#060E1C]/80 px-4 py-3 backdrop-blur md:hidden">
         <h1 className="text-base font-black tracking-widest gradient-text">SPORTPREDICT</h1>
         <button
           type="button"
@@ -22,7 +24,7 @@ export default function Layout() {
         </button>
       </header>
 
-      <main className="p-4 md:ml-64 md:p-8">
+      <main className="relative z-10 p-4 md:ml-64 md:p-8">
         <Outlet />
       </main>
     </div>
