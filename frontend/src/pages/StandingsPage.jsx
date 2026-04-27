@@ -75,7 +75,7 @@ export default function StandingsPage() {
         {loading ? (
           <SkeletonTable />
         ) : error ? (
-          <div className=\"px-4 py-3 text-sm rounded-xl m-4\" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#FCA5A5' }}>{error}</div>
+          <div className="px-4 py-3 text-sm rounded-xl m-4" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#FCA5A5' }}>{error}</div>
         ) : rows.length === 0 ? (
           <div className="text-center py-16" style={{ color: '#5a7a9a' }}>
             <TrendingUp className="w-12 h-12 mx-auto mb-3" style={{ color: '#3d6080' }} />
