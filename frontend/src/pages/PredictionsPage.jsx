@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
+import { formatUkrDateTime } from '../utils/date';
 import { Brain, TrendingUp, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
+import { useSportMode } from '../context/SportModeContext';
 
 export default function PredictionsPage() {
+  const { activeSportId, theme, activeSport } = useSportMode();
   const [predictions, setPredictions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
@@ -11,17 +14,19 @@ export default function PredictionsPage() {
 
   useEffect(() => {
     setError('');
-    api.get('/predictions/').then(res => setPredictions(res.data))
+    setLoading(true);
+    const params = activeSportId ? { sport_id: activeSportId } : {};
+    api.get('/predictions/', { params }).then(res => setPredictions(res.data))
       .catch((err) => {
         console.error(err);
         setError('Не вдалося завантажити прогнози');
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [activeSportId, activeSport]);
 
   if (loading) return (
     <div className="flex justify-center py-20">
-      <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(59,130,246,0.2)', borderTopColor: '#3B82F6' }} />
+      <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: `${theme.accent}30`, borderTopColor: theme.accent }} />
     </div>
   );
 
@@ -38,7 +43,7 @@ export default function PredictionsPage() {
         <div className="text-center py-16">
           <Brain className="w-12 h-12 mx-auto mb-3" style={{ color: '#3d6080' }} />
           <p style={{ color: '#5a7a9a' }}>Прогнозів поки немає</p>
-          <Link to="/matches" className="inline-block mt-3 text-sm text-blue-400 hover:underline">
+          <Link to="/matches" className="inline-block mt-3 text-sm hover:underline" style={{ color: theme.accent2 }}>
             Перейти до матчів →
           </Link>
         </div>
@@ -48,11 +53,10 @@ export default function PredictionsPage() {
             <div key={pred.id} className="glass-card overflow-hidden">
               <div
                 className="flex items-center justify-between p-5 cursor-pointer transition-colors"
-                style={{  }}
                 onClick={() => setExpanded(expanded === pred.id ? null : pred.id)}
               >
                 <div className="flex items-center gap-4 min-w-0">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg,#1D4ED8,#10B981)' }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: theme.gradient }}>
                     <Brain className="w-5 h-5 text-white" />
                   </div>
                   <div className="min-w-0">
@@ -64,9 +68,9 @@ export default function PredictionsPage() {
                     <div className="flex items-center gap-3 text-xs mt-1" style={{ color: '#5a7a9a' }}>
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
-                        {new Date(pred.created_at).toLocaleString('uk-UA')}
+                        {formatUkrDateTime(pred.created_at)}
                       </span>
-                      <span className="font-mono px-1.5 py-0.5 rounded" style={{ background: 'rgba(59,130,246,0.1)', color: '#60a5fa' }}>
+                      <span className="font-mono px-1.5 py-0.5 rounded" style={{ background: `${theme.accent}18`, color: theme.accent2 }}>
                         {pred.model_name}
                       </span>
                     </div>
@@ -76,7 +80,7 @@ export default function PredictionsPage() {
                 <div className="flex items-center gap-4 shrink-0">
                   <IsCorrectBadge value={pred.is_correct} />
                   <ResultBadge result={pred.predicted_result} />
-                  <ConfidenceCircle value={pred.confidence} />
+                  <ConfidenceCircle value={pred.confidence} accentColor={theme.accent} />
                   {expanded === pred.id
                     ? <ChevronUp className="w-5 h-5" style={{ color: '#5a7a9a' }} />
                     : <ChevronDown className="w-5 h-5" style={{ color: '#5a7a9a' }} />
@@ -85,7 +89,7 @@ export default function PredictionsPage() {
               </div>
 
               {expanded === pred.id && (
-                <div className="px-5 pb-5 pt-4 space-y-4" style={{ borderTop: '1px solid rgba(148,200,255,0.08)' }}>
+                <div className="px-5 pb-5 pt-4 space-y-4" style={{ borderTop: `1px solid ${theme.accent}12` }}>
                   <div className={`grid gap-3 ${pred.draw_prob > 0 ? 'grid-cols-3' : 'grid-cols-2'}`}>
                     <ProbCard label="Перемога госп." pct={pred.home_win_prob * 100} color="emerald" />
                     {pred.draw_prob > 0 && <ProbCard label="Нічия" pct={pred.draw_prob * 100} color="amber" />}
@@ -93,17 +97,18 @@ export default function PredictionsPage() {
                   </div>
 
                   {pred.ai_analysis && !pred.ai_analysis.startsWith('AI-аналіз недоступний') && (
-                    <div className="p-4 rounded-xl" style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)' }}>
-                      <h4 className="text-sm font-bold text-blue-400 mb-2 flex items-center gap-2">
+                    <div className="p-4 rounded-xl" style={{ background: `${theme.accent}0e`, border: `1px solid ${theme.accent}22` }}>
+                      <h4 className="text-sm font-bold mb-2 flex items-center gap-2" style={{ color: theme.accent2 }}>
                         <Brain className="w-4 h-4" /> AI Аналіз
                       </h4>
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: '#93C5FD' }}>{pred.ai_analysis}</p>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: theme.accent2 + 'cc' }}>{pred.ai_analysis}</p>
                     </div>
                   )}
 
                   <Link
                     to={`/matches/${pred.match_id}`}
-                    className="inline-flex items-center gap-1 text-sm text-blue-400 hover:underline"
+                    className="inline-flex items-center gap-1 text-sm hover:underline"
+                    style={{ color: theme.accent2 }}
                   >
                     <TrendingUp className="w-4 h-4" /> Переглянути матч →
                   </Link>
@@ -154,18 +159,18 @@ function ResultBadge({ result }) {
   return <span className="px-2.5 py-1 rounded-lg text-xs font-semibold" style={{ background: c.bg, color: c.color, border: `1px solid ${c.border}` }}>{c.label}</span>;
 }
 
-function ConfidenceCircle({ value }) {
+function ConfidenceCircle({ value, accentColor = '#3b82f6' }) {
   const pct = ((value || 0) * 100).toFixed(0);
   return (
     <div className="relative w-10 h-10">
       <svg className="w-10 h-10 -rotate-90" viewBox="0 0 36 36">
         <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-          fill="none" stroke="rgba(59,130,246,0.15)" strokeWidth="3" />
+          fill="none" stroke={`${accentColor}28`} strokeWidth="3" />
         <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-          fill="none" stroke="#3b82f6" strokeWidth="3"
+          fill="none" stroke={accentColor} strokeWidth="3"
           strokeDasharray={`${pct}, 100`} />
       </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold" style={{ color: '#60a5fa' }}>
+      <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold" style={{ color: accentColor }}>
         {pct}%
       </span>
     </div>

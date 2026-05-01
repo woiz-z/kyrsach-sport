@@ -1,11 +1,144 @@
-export const SPORT_META = {
-  football: { name: 'Футбол', icon: '⚽' },
-  basketball: { name: 'Баскетбол', icon: '🏀' },
-  tennis: { name: 'Теніс', icon: '🎾' },
-  hockey: { name: 'Хокей', icon: '🏒' },
-  volleyball: { name: 'Волейбол', icon: '🏐' },
-  esports: { name: 'Кіберспорт', icon: '🎮' },
+export const SPORT_THEMES = {
+  football: {
+    name: 'Футбол',
+    icon: '⚽',
+    bg: '#030E06',
+    surface: 'rgba(10,28,14,0.85)',
+    accent: '#16A34A',
+    accent2: '#4ADE80',
+    gradient: 'linear-gradient(135deg,#15803D,#4ADE80)',
+    gradientText: 'linear-gradient(135deg,#4ADE80 0%,#86EFAC 100%)',
+    navActive: 'linear-gradient(135deg,#15803D,#059669)',
+    navGlow: 'rgba(22,163,74,0.45)',
+    glow: 'rgba(22,163,74,0.35)',
+    inputFocus: 'rgba(22,163,74,0.6)',
+    inputFocusShadow: 'rgba(22,163,74,0.12)',
+    cardBorder: 'rgba(74,222,128,0.08)',
+    bodyRadial1: 'rgba(22,163,74,0.09)',
+    bodyRadial2: 'rgba(74,222,128,0.05)',
+    bodyRadial3: 'rgba(5,150,105,0.04)',
+    particleColors: [[22, 163, 74], [74, 222, 128], [16, 185, 129]],
+    scrollbar: 'rgba(22,163,74,0.35)',
+    pulseDot: '#4ADE80',
+  },
+  basketball: {
+    name: 'Баскетбол',
+    icon: '🏀',
+    bg: '#0D0700',
+    surface: 'rgba(26,14,5,0.85)',
+    accent: '#EA580C',
+    accent2: '#FB923C',
+    gradient: 'linear-gradient(135deg,#C2410C,#FB923C)',
+    gradientText: 'linear-gradient(135deg,#FB923C 0%,#FED7AA 100%)',
+    navActive: 'linear-gradient(135deg,#C2410C,#D97706)',
+    navGlow: 'rgba(234,88,12,0.45)',
+    glow: 'rgba(234,88,12,0.35)',
+    inputFocus: 'rgba(234,88,12,0.6)',
+    inputFocusShadow: 'rgba(234,88,12,0.12)',
+    cardBorder: 'rgba(251,146,60,0.08)',
+    bodyRadial1: 'rgba(234,88,12,0.09)',
+    bodyRadial2: 'rgba(251,146,60,0.05)',
+    bodyRadial3: 'rgba(245,158,11,0.04)',
+    particleColors: [[234, 88, 12], [251, 146, 60], [245, 158, 11]],
+    scrollbar: 'rgba(234,88,12,0.35)',
+    pulseDot: '#FB923C',
+  },
+  tennis: {
+    name: 'Теніс',
+    icon: '🎾',
+    bg: '#060A00',
+    surface: 'rgba(12,18,4,0.85)',
+    accent: '#84CC16',
+    accent2: '#A3E635',
+    gradient: 'linear-gradient(135deg,#4D7C0F,#A3E635)',
+    gradientText: 'linear-gradient(135deg,#A3E635 0%,#D9F99D 100%)',
+    navActive: 'linear-gradient(135deg,#4D7C0F,#65A30D)',
+    navGlow: 'rgba(132,204,22,0.45)',
+    glow: 'rgba(132,204,22,0.35)',
+    inputFocus: 'rgba(132,204,22,0.6)',
+    inputFocusShadow: 'rgba(132,204,22,0.12)',
+    cardBorder: 'rgba(163,230,53,0.08)',
+    bodyRadial1: 'rgba(132,204,22,0.09)',
+    bodyRadial2: 'rgba(163,230,53,0.05)',
+    bodyRadial3: 'rgba(245,158,11,0.04)',
+    particleColors: [[132, 204, 22], [163, 230, 53], [245, 158, 11]],
+    scrollbar: 'rgba(132,204,22,0.35)',
+    pulseDot: '#A3E635',
+  },
+  hockey: {
+    name: 'Хокей',
+    icon: '🏒',
+    bg: '#010C1A',
+    surface: 'rgba(4,18,34,0.85)',
+    accent: '#0EA5E9',
+    accent2: '#38BDF8',
+    gradient: 'linear-gradient(135deg,#0369A1,#38BDF8)',
+    gradientText: 'linear-gradient(135deg,#38BDF8 0%,#BAE6FD 100%)',
+    navActive: 'linear-gradient(135deg,#0369A1,#0891B2)',
+    navGlow: 'rgba(14,165,233,0.45)',
+    glow: 'rgba(14,165,233,0.35)',
+    inputFocus: 'rgba(14,165,233,0.6)',
+    inputFocusShadow: 'rgba(14,165,233,0.12)',
+    cardBorder: 'rgba(56,189,248,0.08)',
+    bodyRadial1: 'rgba(14,165,233,0.09)',
+    bodyRadial2: 'rgba(56,189,248,0.06)',
+    bodyRadial3: 'rgba(186,230,253,0.03)',
+    particleColors: [[14, 165, 233], [56, 189, 248], [186, 230, 253]],
+    scrollbar: 'rgba(14,165,233,0.35)',
+    pulseDot: '#38BDF8',
+  },
+  volleyball: {
+    name: 'Волейбол',
+    icon: '🏐',
+    bg: '#0C0800',
+    surface: 'rgba(22,16,3,0.85)',
+    accent: '#F59E0B',
+    accent2: '#FBBF24',
+    gradient: 'linear-gradient(135deg,#D97706,#FBBF24)',
+    gradientText: 'linear-gradient(135deg,#FBBF24 0%,#FEF08A 100%)',
+    navActive: 'linear-gradient(135deg,#B45309,#D97706)',
+    navGlow: 'rgba(245,158,11,0.45)',
+    glow: 'rgba(245,158,11,0.35)',
+    inputFocus: 'rgba(245,158,11,0.6)',
+    inputFocusShadow: 'rgba(245,158,11,0.12)',
+    cardBorder: 'rgba(251,191,36,0.08)',
+    bodyRadial1: 'rgba(245,158,11,0.09)',
+    bodyRadial2: 'rgba(251,191,36,0.05)',
+    bodyRadial3: 'rgba(14,165,233,0.04)',
+    particleColors: [[245, 158, 11], [251, 191, 36], [14, 165, 233]],
+    scrollbar: 'rgba(245,158,11,0.35)',
+    pulseDot: '#FBBF24',
+  },
+  esports: {
+    name: 'Кіберспорт',
+    icon: '🎮',
+    bg: '#06030F',
+    surface: 'rgba(12,6,22,0.85)',
+    accent: '#8B5CF6',
+    accent2: '#A78BFA',
+    gradient: 'linear-gradient(135deg,#6D28D9,#EC4899)',
+    gradientText: 'linear-gradient(135deg,#A78BFA 0%,#F472B6 100%)',
+    navActive: 'linear-gradient(135deg,#6D28D9,#9333EA)',
+    navGlow: 'rgba(139,92,246,0.45)',
+    glow: 'rgba(139,92,246,0.35)',
+    inputFocus: 'rgba(139,92,246,0.6)',
+    inputFocusShadow: 'rgba(139,92,246,0.12)',
+    cardBorder: 'rgba(167,139,250,0.08)',
+    bodyRadial1: 'rgba(139,92,246,0.09)',
+    bodyRadial2: 'rgba(236,72,153,0.06)',
+    bodyRadial3: 'rgba(167,139,250,0.04)',
+    particleColors: [[139, 92, 246], [167, 139, 250], [236, 72, 153]],
+    scrollbar: 'rgba(139,92,246,0.35)',
+    pulseDot: '#A78BFA',
+  },
 };
+
+// Keep SPORT_META as alias for backward compat
+export const SPORT_META = Object.fromEntries(
+  Object.entries(SPORT_THEMES).map(([k, v]) => [k, { name: v.name, icon: v.icon }])
+);
+
+export const SPORT_KEYS = Object.keys(SPORT_THEMES);
 
 const aliases = {
   'футбол': 'football',
@@ -22,8 +155,12 @@ const aliases = {
   esports: 'esports',
 };
 
+export function resolveSportKey(sport) {
+  if (!sport) return 'football';
+  return aliases[String(sport).toLowerCase()] || 'football';
+}
+
 export function resolveSportMeta(sport) {
-  if (!sport) return SPORT_META.football;
-  const key = aliases[String(sport).toLowerCase()] || 'football';
-  return SPORT_META[key] || SPORT_META.football;
+  const key = resolveSportKey(sport);
+  return SPORT_THEMES[key] || SPORT_THEMES.football;
 }

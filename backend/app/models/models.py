@@ -81,6 +81,9 @@ class Team(Base):
     logo_url = Column(String(500), nullable=True)
     founded_year = Column(Integer, nullable=True)
 
+    # ESPN team ID — populated during scraping, used for team-specific news API calls
+    espn_id = Column(String(30), nullable=True, index=True)
+
     sport = relationship("Sport", back_populates="teams")
     players = relationship("Player", back_populates="team")
     statistics = relationship("TeamStatistics", back_populates="team")
@@ -98,8 +101,17 @@ class Player(Base):
     position = Column(String(50), nullable=True)
     date_of_birth = Column(Date, nullable=True)
     nationality = Column(String(100), nullable=True)
+    photo_url = Column(String(500), nullable=True)
+    height_cm = Column(Integer, nullable=True)
+    weight_kg = Column(Integer, nullable=True)
+    jersey_number = Column(Integer, nullable=True)
+    espn_id = Column(String(30), nullable=True, index=True)
+    stats_json = Column(JSON, nullable=True)
+    bio = Column(Text, nullable=True)
 
     team = relationship("Team", back_populates="players")
+    lineups = relationship("MatchLineup", back_populates="player")
+    events = relationship("MatchEvent", back_populates="player")
 
 
 # ── Seasons ────────────────────────────────────────────
@@ -111,6 +123,10 @@ class Season(Base):
     name = Column(String(100), nullable=False)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
+
+    # ESPN sport/league codes for news fetching (e.g. "soccer" / "eng.1")
+    espn_sport = Column(String(50), nullable=True)
+    espn_league = Column(String(50), nullable=True)
 
     sport = relationship("Sport", back_populates="seasons")
     matches = relationship("Match", back_populates="season")
@@ -132,12 +148,20 @@ class Match(Base):
     home_score = Column(Integer, nullable=True)
     away_score = Column(Integer, nullable=True)
     result = Column(Enum(MatchResult), nullable=True)
+    # External provider event ID (e.g. ESPN event id) for deduplication and re-fetching
+    external_id = Column(String(80), nullable=True, index=True)
+    # Enrichment flag: True once lineup/events/stats have been fetched
+    enriched = Column(Boolean, default=False, nullable=False)
 
     sport = relationship("Sport", back_populates="matches")
     season = relationship("Season", back_populates="matches")
     home_team = relationship("Team", foreign_keys=[home_team_id], back_populates="home_matches")
     away_team = relationship("Team", foreign_keys=[away_team_id], back_populates="away_matches")
     predictions = relationship("Prediction", back_populates="match")
+    lineups = relationship("MatchLineup", back_populates="match", cascade="all, delete-orphan")
+    events = relationship("MatchEvent", back_populates="match", cascade="all, delete-orphan",
+                          order_by="MatchEvent.minute")
+    stat_lines = relationship("MatchStatLine", back_populates="match", cascade="all, delete-orphan")
 
 
 # ── Team Statistics ────────────────────────────────────
@@ -174,21 +198,58 @@ class HeadToHead(Base):
     draws = Column(Integer, default=0)
 
 
-# ── AI Models ──────────────────────────────────────────
-class AIModel(Base):
-    __tablename__ = "ai_models"
+# ── Match Lineups ─────────────────────────────────────
+class MatchLineup(Base):
+    """Starting XI + bench for each team in a match."""
+    __tablename__ = "match_lineups"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), nullable=False)
-    description = Column(Text, nullable=True)
-    algorithm = Column(String(100), nullable=False)
-    accuracy = Column(Float, nullable=True)
-    precision_score = Column(Float, nullable=True)
-    recall_score = Column(Float, nullable=True)
-    f1 = Column(Float, nullable=True)
-    trained_at = Column(DateTime, nullable=True)
-    is_active = Column(Boolean, default=False)
-    parameters = Column(JSON, nullable=True)
+    match_id = Column(Integer, ForeignKey("matches.id", ondelete="CASCADE"), nullable=False)
+    team_id = Column(Integer, ForeignKey("teams.id"), nullable=False)
+    player_id = Column(Integer, ForeignKey("players.id", ondelete="CASCADE"), nullable=False)
+    is_starter = Column(Boolean, default=True, nullable=False)
+    position = Column(String(50), nullable=True)
+    jersey_number = Column(Integer, nullable=True)
+    minutes_played = Column(Integer, nullable=True)
+
+    match = relationship("Match", back_populates="lineups")
+    team = relationship("Team")
+    player = relationship("Player")
+
+
+# ── Match Events ───────────────────────────────────────
+class MatchEvent(Base):
+    """In-match events: goals, cards, substitutions, assists."""
+    __tablename__ = "match_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    match_id = Column(Integer, ForeignKey("matches.id", ondelete="CASCADE"), nullable=False)
+    team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
+    player_id = Column(Integer, ForeignKey("players.id"), nullable=True)
+    event_type = Column(String(50), nullable=False)  # goal / yellow_card / red_card / substitution / assist
+    minute = Column(Integer, nullable=True)
+    detail = Column(String(300), nullable=True)  # human-readable description
+
+    match = relationship("Match", back_populates="events")
+    team = relationship("Team")
+    player = relationship("Player")
+
+
+# ── Match Stat Lines ───────────────────────────────────
+class MatchStatLine(Base):
+    """Per-team aggregated match statistics (possession, shots, etc.)."""
+    __tablename__ = "match_stat_lines"
+
+    id = Column(Integer, primary_key=True, index=True)
+    match_id = Column(Integer, ForeignKey("matches.id", ondelete="CASCADE"), nullable=False)
+    is_home = Column(Boolean, nullable=False)
+    # Flexible JSON bag — keys vary by sport:
+    # soccer: possession, shots, shots_on_target, corners, fouls, yellow_cards, red_cards, offsides, pass_accuracy
+    # basketball: points, rebounds, assists, steals, blocks, turnovers, fg_pct, three_pct, ft_pct
+    # hockey: shots, saves, power_play_goals, power_play_attempts, faceoff_pct
+    stats = Column(JSON, nullable=True, default=dict)
+
+    match = relationship("Match", back_populates="stat_lines")
 
 
 # ── Predictions ────────────────────────────────────────
@@ -210,3 +271,62 @@ class Prediction(Base):
 
     match = relationship("Match", back_populates="predictions")
     user = relationship("User", back_populates="predictions")
+
+
+# ── News ───────────────────────────────────────────────
+class NewsArticle(Base):
+    """Stores news/gossip articles from ESPN, Google News, Reddit, etc."""
+    __tablename__ = "news_articles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(500), nullable=False)
+    summary = Column(Text, nullable=True)
+    url = Column(String(2000), unique=True, nullable=False)
+    image_url = Column(String(2000), nullable=True)
+    source = Column(String(200), nullable=True)   # "ESPN", "Google News", "Reddit r/soccer"
+    language = Column(String(10), nullable=True)
+    published_at = Column(DateTime, nullable=True)
+    fetched_at = Column(DateTime, default=datetime.utcnow)
+
+    match_links = relationship("MatchNews", back_populates="article", cascade="all, delete-orphan")
+    team_links = relationship("TeamNews", back_populates="article", cascade="all, delete-orphan")
+    season_links = relationship("SeasonNews", back_populates="article", cascade="all, delete-orphan")
+
+
+class MatchNews(Base):
+    """Junction: match ↔ news article."""
+    __tablename__ = "match_news"
+    __table_args__ = (UniqueConstraint("match_id", "article_id", name="uq_match_article"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    match_id = Column(Integer, ForeignKey("matches.id", ondelete="CASCADE"), nullable=False)
+    article_id = Column(Integer, ForeignKey("news_articles.id", ondelete="CASCADE"), nullable=False)
+
+    match = relationship("Match")
+    article = relationship("NewsArticle", back_populates="match_links")
+
+
+class TeamNews(Base):
+    """Junction: team ↔ news article."""
+    __tablename__ = "team_news"
+    __table_args__ = (UniqueConstraint("team_id", "article_id", name="uq_team_article"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    team_id = Column(Integer, ForeignKey("teams.id", ondelete="CASCADE"), nullable=False)
+    article_id = Column(Integer, ForeignKey("news_articles.id", ondelete="CASCADE"), nullable=False)
+
+    team = relationship("Team")
+    article = relationship("NewsArticle", back_populates="team_links")
+
+
+class SeasonNews(Base):
+    """Junction: season/league ↔ news article."""
+    __tablename__ = "season_news"
+    __table_args__ = (UniqueConstraint("season_id", "article_id", name="uq_season_article"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    season_id = Column(Integer, ForeignKey("seasons.id", ondelete="CASCADE"), nullable=False)
+    article_id = Column(Integer, ForeignKey("news_articles.id", ondelete="CASCADE"), nullable=False)
+
+    season = relationship("Season")
+    article = relationship("NewsArticle", back_populates="season_links")

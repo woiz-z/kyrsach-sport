@@ -1,23 +1,101 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func
+from sqlalchemy import select, and_, func, or_
 from sqlalchemy.orm import selectinload
 from typing import List, Optional
 from datetime import datetime
 from app.database import get_db
 from app.models.models import (
     Prediction, Match, MatchStatus, MatchResult,
-    TeamStatistics, HeadToHead, AIModel, User, Team
+    TeamStatistics, HeadToHead, User, Team,
+    MatchLineup, MatchEvent,
 )
-from app.schemas.schemas import PredictionRequest, PredictionResponse, PredictionDetailResponse, AIModelResponse
+from app.schemas.schemas import PredictionRequest, PredictionResponse, PredictionDetailResponse
 from app.services.auth import get_current_user
-from app.ai.feature_extractor import extract_features_for_match, features_to_array, get_team_stats, get_h2h
-from app.ai.predictor import predict as ml_predict
 from app.ai.llm_analyzer import generate_match_analysis
 from app.ai.sport_profiles import get_sport_profile
-from app.services.model_training import model_sport_id as _model_sport_id
 
 router = APIRouter(prefix="/api/predictions", tags=["Predictions"])
+
+
+async def _get_team_stats(db: AsyncSession, team_id: int, season_id: int) -> dict:
+    result = await db.execute(
+        select(TeamStatistics).where(
+            and_(TeamStatistics.team_id == team_id, TeamStatistics.season_id == season_id)
+        )
+    )
+    stats = result.scalar_one_or_none()
+    if not stats:
+        return {"points": 0, "wins": 0, "draws": 0, "losses": 0,
+                "goals_for": 0, "goals_against": 0, "matches_played": 0}
+    return {
+        "points": stats.points, "wins": stats.wins, "draws": stats.draws,
+        "losses": stats.losses, "goals_for": stats.goals_for,
+        "goals_against": stats.goals_against, "matches_played": stats.matches_played,
+    }
+
+
+async def _get_h2h(db: AsyncSession, team1_id: int, team2_id: int) -> dict:
+    result = await db.execute(
+        select(HeadToHead).where(
+            or_(
+                and_(HeadToHead.team1_id == team1_id, HeadToHead.team2_id == team2_id),
+                and_(HeadToHead.team1_id == team2_id, HeadToHead.team2_id == team1_id),
+            )
+        )
+    )
+    h2h = result.scalar_one_or_none()
+    if not h2h:
+        return {"team1_wins": 0, "team2_wins": 0, "draws": 0, "total_matches": 0}
+    if h2h.team1_id == team1_id:
+        return {"team1_wins": h2h.team1_wins, "team2_wins": h2h.team2_wins,
+                "draws": h2h.draws, "total_matches": h2h.total_matches}
+    return {"team1_wins": h2h.team2_wins, "team2_wins": h2h.team1_wins,
+            "draws": h2h.draws, "total_matches": h2h.total_matches}
+
+
+def _calculate_probabilities(home_stats: dict, away_stats: dict, allows_draw: bool) -> dict:
+    """Stats-based probability estimation with home advantage."""
+    home_mp = home_stats.get("matches_played") or 0
+    away_mp = away_stats.get("matches_played") or 0
+
+    home_ppg = (home_stats.get("points") or 0) / max(home_mp, 1)
+    away_ppg = (away_stats.get("points") or 0) / max(away_mp, 1)
+
+    # Home advantage factor
+    home_strength = max(home_ppg * 1.15, 0.05)
+    away_strength = max(away_ppg, 0.05)
+
+    if allows_draw:
+        draw_weight = 0.25
+        total = home_strength + away_strength + draw_weight
+        home_prob = home_strength / total
+        away_prob = away_strength / total
+        draw_prob = draw_weight / total
+    else:
+        total = home_strength + away_strength
+        home_prob = home_strength / total
+        away_prob = away_strength / total
+        draw_prob = 0.0
+
+    if home_prob >= away_prob and home_prob >= draw_prob:
+        result = "home_win"
+        confidence = home_prob
+    elif away_prob >= home_prob and away_prob >= draw_prob:
+        result = "away_win"
+        confidence = away_prob
+    else:
+        result = "draw"
+        confidence = draw_prob
+
+    return {
+        "predicted_result": result,
+        "home_win_prob": round(home_prob, 4),
+        "draw_prob": round(draw_prob, 4),
+        "away_win_prob": round(away_prob, 4),
+        "confidence": round(confidence, 4),
+        "model_name": "SportPredict Analytics",
+    }
 
 
 @router.post("/predict", response_model=PredictionResponse)
@@ -36,43 +114,47 @@ async def create_prediction(
     if not match:
         raise HTTPException(status_code=404, detail="Матч не знайдено")
 
-    # Extract features
-    features = await extract_features_for_match(db, req.match_id)
-    if not features:
-        raise HTTPException(status_code=400, detail="Не вдалося витягнути ознаки для матчу")
-
-    feature_array = features_to_array(features)
-
-    # Pick an active model specific to this sport, fallback to latest for sport.
-    active_models = (
-        await db.execute(select(AIModel).where(AIModel.is_active == True).order_by(AIModel.trained_at.desc()))
-    ).scalars().all()
-    model_record = next((m for m in active_models if _model_sport_id(m) == match.sport_id), None)
-
-    if model_record is None:
-        all_models = (
-            await db.execute(select(AIModel).order_by(AIModel.trained_at.desc()))
-        ).scalars().all()
-        model_record = next((m for m in all_models if _model_sport_id(m) == match.sport_id), None)
-
-    algorithm = model_record.algorithm if model_record else "gradient_boosting"
-    model_key = None
-    if model_record and isinstance(model_record.parameters, dict):
-        model_key = model_record.parameters.get("model_key")
     sport_profile = get_sport_profile(match.sport.name if match.sport else None)
 
-    # ML prediction
-    pred = ml_predict(
-        feature_array,
-        algorithm,
-        allows_draw=sport_profile.allows_draw,
-        model_key=model_key,
-    )
+    # Get team stats and H2H
+    home_stats = await _get_team_stats(db, match.home_team_id, match.season_id)
+    away_stats = await _get_team_stats(db, match.away_team_id, match.season_id)
+    h2h = await _get_h2h(db, match.home_team_id, match.away_team_id)
 
-    # Get team stats for LLM
-    home_stats = await get_team_stats(db, match.home_team_id, match.season_id)
-    away_stats = await get_team_stats(db, match.away_team_id, match.season_id)
-    h2h = await get_h2h(db, match.home_team_id, match.away_team_id)
+    # Stats-based probability calculation
+    pred = _calculate_probabilities(home_stats, away_stats, sport_profile.allows_draw)
+
+    # Load lineups for richer analysis
+    lineup_q = await db.execute(
+        select(MatchLineup)
+        .options(selectinload(MatchLineup.player))
+        .where(MatchLineup.match_id == req.match_id)
+    )
+    lineups_db = lineup_q.scalars().all()
+    lineups = None
+    if lineups_db:
+        lineups = {
+            "home": [
+                {"player_name": ln.player.name if ln.player else "", "is_starter": ln.is_starter, "position": ln.position}
+                for ln in lineups_db if ln.team_id == match.home_team_id
+            ],
+            "away": [
+                {"player_name": ln.player.name if ln.player else "", "is_starter": ln.is_starter, "position": ln.position}
+                for ln in lineups_db if ln.team_id == match.away_team_id
+            ],
+        }
+
+    # Load events
+    events_q = await db.execute(
+        select(MatchEvent)
+        .where(MatchEvent.match_id == req.match_id)
+        .order_by(MatchEvent.minute)
+    )
+    events_db = events_q.scalars().all()
+    match_events = [
+        {"event_type": e.event_type, "minute": e.minute, "detail": e.detail}
+        for e in events_db
+    ] if events_db else None
 
     # LLM analysis
     ai_analysis = await generate_match_analysis(
@@ -83,6 +165,8 @@ async def create_prediction(
         away_stats=away_stats,
         h2h=h2h,
         sport_name=match.sport.name if match.sport else None,
+        lineups=lineups,
+        match_events=match_events,
     )
 
     # Save prediction
@@ -95,7 +179,7 @@ async def create_prediction(
         away_win_prob=pred["away_win_prob"],
         is_correct=(pred["predicted_result"] == match.result) if (match.status == MatchStatus.completed and match.result is not None) else None,
         confidence=pred["confidence"],
-        model_name=model_record.name if model_record else pred["model_name"],
+        model_name=pred["model_name"],
         ai_analysis=ai_analysis,
     )
     db.add(prediction)

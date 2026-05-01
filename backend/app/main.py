@@ -6,121 +6,123 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import asyncio
 import logging
-import warnings
-
-# Suppress deprecation warnings from sklearn that flood the logs
-warnings.filterwarnings("ignore", category=FutureWarning, module="sklearn")
-warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
 
 logger = logging.getLogger(__name__)
-from sqlalchemy import select, func
+from sqlalchemy import select, func, text as sa_text
 from app.database import engine, Base, async_session
-from app.routers import auth, sports, teams, matches, predictions, ai_models, dashboard
+from app.routers import auth, sports, teams, matches, predictions, ai_models, dashboard, news, live, avatars, players
 from app.services.background_jobs import (
     complete_past_matches,
     run_background_loop,
-    run_esports_import_retry_loop,
-    run_model_retrain_loop,
+    run_data_refresh_loop,
+    run_news_refresh_loop,
 )
-from app.services.real_data_importer import import_real_data
-from app.services.football_data_scraper import import_from_football_data
+from app.services.live_poller import run_live_poller_loop
+from app.services.mega_scraper import import_all_sports
 from app.services.sport_bootstrap import ensure_default_sports
-from app.services.model_training import train_best_models_per_sport
 from app.config import get_settings
-from app.models.models import Match, AIModel
-
-
-async def _auto_train_on_startup():
-    """Train best-per-sport models on startup if no models exist in DB."""
-
-    async with async_session() as db:
-        existing_count = await db.execute(select(func.count(AIModel.id)))
-        if (existing_count.scalar() or 0) > 0:
-            return
-
-        summary = await train_best_models_per_sport(db, min_samples=30, seed=42, train_ratio=0.8)
-        logger.info(
-            "[Startup] best-per-sport training: "
-            f"trained={summary.get('sports_trained', 0)} "
-            f"skipped={summary.get('sports_skipped', 0)} "
-            f"failed={summary.get('sports_failed', 0)}"
-        )
+from app.models.models import Match
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
 
-    # 1. Ensure tables exist
+    # 1. Ensure all tables exist (creates new tables; existing ones untouched)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Add new columns to existing matches table if they don't exist yet
+        await conn.execute(sa_text(
+            "ALTER TABLE matches ADD COLUMN IF NOT EXISTS external_id VARCHAR(80)"
+        ))
+        await conn.execute(sa_text(
+            "ALTER TABLE matches ADD COLUMN IF NOT EXISTS enriched BOOLEAN NOT NULL DEFAULT FALSE"
+        ))
+        # New columns for news feature
+        await conn.execute(sa_text(
+            "ALTER TABLE teams ADD COLUMN IF NOT EXISTS espn_id VARCHAR(30)"
+        ))
+        await conn.execute(sa_text(
+            "ALTER TABLE seasons ADD COLUMN IF NOT EXISTS espn_sport VARCHAR(50)"
+        ))
+        await conn.execute(sa_text(
+            "ALTER TABLE seasons ADD COLUMN IF NOT EXISTS espn_league VARCHAR(50)"
+        ))
+        # Player headshot photos
+        await conn.execute(sa_text(
+            "ALTER TABLE players ADD COLUMN IF NOT EXISTS photo_url VARCHAR(500)"
+        ))
+        await conn.execute(sa_text(
+            "ALTER TABLE players ADD COLUMN IF NOT EXISTS height_cm INTEGER"
+        ))
+        await conn.execute(sa_text(
+            "ALTER TABLE players ADD COLUMN IF NOT EXISTS weight_kg INTEGER"
+        ))
+        await conn.execute(sa_text(
+            "ALTER TABLE players ADD COLUMN IF NOT EXISTS jersey_number INTEGER"
+        ))
+        await conn.execute(sa_text(
+            "ALTER TABLE players ADD COLUMN IF NOT EXISTS espn_id VARCHAR(30)"
+        ))
+        await conn.execute(sa_text(
+            "ALTER TABLE players ADD COLUMN IF NOT EXISTS stats_json JSONB"
+        ))
+        # Backfill NULL created_at for users
+        await conn.execute(sa_text(
+            "UPDATE users SET created_at = NOW() WHERE created_at IS NULL"
+        ))
 
     async with async_session() as db:
         await ensure_default_sports(db)
         await db.commit()
 
-    # Backfill NULL created_at for any users that were inserted without it
-    from sqlalchemy import update, text as sa_text
-    from app.models.models import User as UserModel
-    from datetime import datetime as _dt
-    async with engine.begin() as conn:
-        await conn.execute(
-            sa_text("UPDATE users SET created_at = NOW() WHERE created_at IS NULL")
-        )
-
-    # 2. Sync data once if DB is empty — run in background so startup is not blocked
+    # 2. Full data import in background if DB is empty
     async def _bg_import():
-        if settings.AUTO_SYNC_FOOTBALL_DATA:
-            async with async_session() as db:
-                match_count = await db.execute(select(func.count(Match.id)))
-                if (match_count.scalar() or 0) == 0:
-                    imported = await import_from_football_data(
-                        db,
-                        reset_existing=False,
-                        min_season_code=settings.FOOTBALL_DATA_MIN_SEASON,
-                        max_links=settings.FOOTBALL_DATA_MAX_LINKS,
-                    )
-                    logger.info(f"[Startup] football-data synced: {imported}")
-        elif settings.AUTO_SYNC_REAL_DATA:
-            async with async_session() as db:
-                match_count = await db.execute(select(func.count(Match.id)))
-                if (match_count.scalar() or 0) == 0:
-                    try:
-                        imported = await import_real_data(db, reset_existing=False)
-                        logger.info(f"[Startup] Real data synced: {imported}")
-                    except Exception as exc:
-                        logger.error(f"[Startup] Real data import failed: {exc}")
+        async with async_session() as db:
+            match_count = await db.execute(select(func.count(Match.id)))
+            if (match_count.scalar() or 0) == 0:
+                try:
+                    logger.info("[Startup] DB is empty — starting full ESPN import …")
+                    summary = await import_all_sports(db, reset_existing=False)
+                    logger.info(f"[Startup] ESPN import done: {summary}")
+                except Exception as exc:
+                    logger.error(f"[Startup] ESPN import failed: {exc}")
 
-    # 3. Optional background loops
+        # Always import esports (OpenDota) on startup
+        try:
+            from app.services.esports_scraper import import_esports
+            async with async_session() as db:
+                from app.models.models import Match as _Match
+                from sqlalchemy import select as _select, func as _func
+                from app.models.models import Sport as _Sport
+                sport_res = await db.execute(_select(_Sport).where(_Sport.name == "Кіберспорт"))
+                sport_obj = sport_res.scalar_one_or_none()
+                if sport_obj:
+                    esport_count_res = await db.execute(
+                        _select(_func.count()).select_from(_Match).where(_Match.sport_id == sport_obj.id)
+                    )
+                    existing = esport_count_res.scalar() or 0
+                    if existing < 10:
+                        logger.info("[Startup] Running esports import (OpenDota) …")
+                        summary = await import_esports(db, max_matches=200)
+                        logger.info(f"[Startup] Esports import done: {summary}")
+        except Exception as exc:
+            logger.error(f"[Startup] Esports import failed: {exc}")
+
+    # 3. Background loops
     background_tasks = [asyncio.create_task(_bg_import())]
+
     if settings.AUTO_SIMULATE_PAST_MATCHES:
         completed = await complete_past_matches(batch=200)
         if completed:
             logger.info(f"[Startup] Auto-completed {completed} past scheduled matches")
         background_tasks.append(asyncio.create_task(run_background_loop()))
 
-    if settings.AUTO_RETRY_ESPORTS_IMPORT:
-        background_tasks.append(
-            asyncio.create_task(
-                run_esports_import_retry_loop(
-                    initial_delay=settings.ESPORTS_RETRY_INITIAL_DELAY_SECONDS,
-                    max_delay=settings.ESPORTS_RETRY_MAX_DELAY_SECONDS,
-                )
-            )
-        )
-
-    if settings.AUTO_RETRAIN_MODELS:
-        background_tasks.append(
-            asyncio.create_task(
-                run_model_retrain_loop(
-                    interval_seconds=settings.MODEL_RETRAIN_INTERVAL_SECONDS,
-                    min_samples=settings.MODEL_RETRAIN_MIN_SAMPLES,
-                )
-            )
-        )
-
-    # 4. Train ML models if none exist
-    await _auto_train_on_startup()
+    # Data refresh loop replaces the old esports retry loop
+    background_tasks.append(asyncio.create_task(run_data_refresh_loop(interval_seconds=120)))
+    # News refresh loop — fetches ESPN/Google News/Reddit for upcoming matches
+    background_tasks.append(asyncio.create_task(run_news_refresh_loop(interval_seconds=3600)))
+    background_tasks.append(asyncio.create_task(run_live_poller_loop()))
 
     yield
 
@@ -168,6 +170,10 @@ app.include_router(matches.router)
 app.include_router(predictions.router)
 app.include_router(ai_models.router)
 app.include_router(dashboard.router)
+app.include_router(news.router)
+app.include_router(live.router)
+app.include_router(avatars.router)
+app.include_router(players.router)
 
 
 @app.get("/api/health", tags=["System"])

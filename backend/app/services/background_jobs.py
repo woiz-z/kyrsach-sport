@@ -178,74 +178,68 @@ async def run_background_loop():
         await asyncio.sleep(60)
 
 
-async def run_esports_import_retry_loop(initial_delay: int = 45, max_delay: int = 1800):
-    """Retry real esports import with exponential backoff until provider limits clear."""
-    delay = max(10, initial_delay)
+async def run_data_refresh_loop(interval_seconds: int = 600):
+    """Refresh recent match data from ESPN every ~10 minutes."""
+    from app.services.mega_scraper import refresh_recent_data, enrich_pending_matches
+
+    # Initial delay to let startup import finish first
+    await asyncio.sleep(10)
 
     while True:
-        sleep_for = delay
         try:
             async with async_session() as db:
-                from app.services.real_data_importer import import_esports_data
+                result = await refresh_recent_data(db)
+                print(f"[BG-Refresh] new={result.get('new_matches_added', 0)} sports={result.get('sports_refreshed', 0)}")
+        except Exception as exc:
+            print(f"[BG-Refresh] Error: {exc}")
 
-                summary = await import_esports_data(db)
+        try:
+            async with async_session() as db:
+                enriched = await enrich_pending_matches(db, limit=20)
+                if enriched:
+                    print(f"[BG-Enrich] Enriched {enriched} matches")
+        except Exception as exc:
+            print(f"[BG-Enrich] Error: {exc}")
 
-            added = int(summary.get("new_matches_added", 0))
-            total = int(summary.get("matches", 0))
-            errors = ((summary.get("quality") or {}).get("provider_errors") or [])
-
-            if total > 0 and not errors:
-                # Healthy state: keep refreshing but less aggressively.
-                delay = max(300, initial_delay)
-                sleep_for = delay
-            elif any("used_fallback" in e for e in errors):
-                # Fallback data was seeded — back off aggressively, no need to spam.
-                sleep_for = max_delay
-                delay = max_delay
-            elif added > 0:
-                # Made progress, try again soon.
-                delay = max(10, initial_delay)
-                sleep_for = delay
-            else:
-                # No progress, back off exponentially.
-                sleep_for = delay
-                delay = min(max_delay, int(delay * 1.8))
-
-            print(
-                "[BG-Esports] "
-                f"matches={total} new={added} errors={len(errors)} next_retry={sleep_for}s"
-            )
+        try:
+            from app.services.esports_scraper import refresh_esports
+            async with async_session() as db:
+                result = await refresh_esports(db)
+                print(f"[BG-Esports] new={result.get('new_matches', 0)} skipped={result.get('skipped', 0)}")
         except Exception as exc:
             print(f"[BG-Esports] Error: {exc}")
-            sleep_for = delay
-            delay = min(max_delay, int(delay * 1.8))
 
-        await asyncio.sleep(sleep_for)
+        await asyncio.sleep(interval_seconds)
 
 
-async def run_model_retrain_loop(interval_seconds: int = 86400, min_samples: int = 30):
-    """Periodically retrain best model per sport to keep models fresh."""
-    from app.services.model_training import train_best_models_per_sport
+async def run_news_refresh_loop(interval_seconds: int = 3600):
+    """
+    Refresh news for upcoming matches and leagues.
+    Runs every hour; league news is refreshed every 4 hours.
+    """
+    from app.services.news_scraper import refresh_upcoming_matches_news, refresh_all_seasons_news
 
-    delay = max(60, interval_seconds)
+    # Initial delay — let the ESPN import finish first
+    await asyncio.sleep(90)
+
+    run_count = 0
     while True:
         try:
             async with async_session() as db:
-                summary = await train_best_models_per_sport(
-                    db,
-                    min_samples=max(10, min_samples),
-                    seed=42,
-                    train_ratio=0.8,
-                )
-
-            print(
-                "[BG-Retrain] "
-                f"trained={summary.get('sports_trained', 0)} "
-                f"skipped={summary.get('sports_skipped', 0)} "
-                f"failed={summary.get('sports_failed', 0)} "
-                f"next_retry={delay}s"
-            )
+                result = await refresh_upcoming_matches_news(db, days_ahead=7)
+                print(f"[News] Match news: {result}")
         except Exception as exc:
-            print(f"[BG-Retrain] Error: {exc}")
+            print(f"[News] Match news error: {exc}")
 
-        await asyncio.sleep(delay)
+        # Refresh league/season news every 4 hours
+        if run_count % 4 == 0:
+            try:
+                async with async_session() as db:
+                    result = await refresh_all_seasons_news(db)
+                    print(f"[News] Season news: {result}")
+            except Exception as exc:
+                print(f"[News] Season news error: {exc}")
+
+        run_count += 1
+        await asyncio.sleep(interval_seconds)
+

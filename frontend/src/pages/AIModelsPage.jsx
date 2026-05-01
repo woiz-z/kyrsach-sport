@@ -1,58 +1,31 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import { formatUkrDate } from '../utils/date';
 import {
-  Brain, Cpu, CheckCircle2, XCircle, Loader2, BarChart3, RefreshCw, Gauge, FlaskConical
+  Brain, Cpu, CheckCircle2, XCircle, Loader2, BarChart3, RefreshCw,
+  TrendingUp, Zap, Activity, ChevronRight,
 } from 'lucide-react';
 
 export default function AIModelsPage() {
-  const [models, setModels] = useState([]);
-  const [sportsMap, setSportsMap] = useState({});
-  const [algorithms, setAlgorithms] = useState([]);
-  const [backtest, setBacktest] = useState(null);
-  const [ablation, setAblation] = useState(null);
-  const [diagLoading, setDiagLoading] = useState(false);
-  const [diagError, setDiagError] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [status, setStatus] = useState(null);
+  const [performance, setPerformance] = useState([]);
+  const [recentAnalyses, setRecentAnalyses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [training, setTraining] = useState(null);
-  const [trainingAll, setTrainingAll] = useState(false);
-
-  const loadDiagnostics = async () => {
-    setDiagLoading(true);
-    setDiagError('');
-    try {
-      const [bt, ab] = await Promise.all([
-        api.get('/ai-models/diagnostics/backtest'),
-        api.get('/ai-models/diagnostics/ablation'),
-      ]);
-      setBacktest(bt.data);
-      setAblation(ab.data);
-    } catch (err) {
-      setBacktest(null);
-      setAblation(null);
-      setDiagError(err.response?.data?.detail || 'Не вдалося завантажити diagnostics');
-    } finally {
-      setDiagLoading(false);
-    }
-  };
+  const [error, setError] = useState('');
 
   const load = async () => {
     setError('');
     try {
-      const [m, a] = await Promise.all([
-        api.get('/ai-models/models'),
-        api.get('/ai-models/available-algorithms'),
+      const [s, p, r] = await Promise.all([
+        api.get('/ai-models/status'),
+        api.get('/ai-models/performance'),
+        api.get('/ai-models/recent-analyses?limit=8'),
       ]);
-      setModels(m.data);
-      setAlgorithms(a.data);
-
-      const sports = await api.get('/sports/');
-      const map = {};
-      (sports.data || []).forEach((s) => { map[s.id] = s.name; });
-      setSportsMap(map);
+      setStatus(s.data);
+      setPerformance(p.data || []);
+      setRecentAnalyses(r.data || []);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Не вдалося завантажити моделі');
+      setError(err.response?.data?.detail || 'Не вдалося завантажити дані AI');
     } finally {
       setLoading(false);
     }
@@ -60,63 +33,29 @@ export default function AIModelsPage() {
 
   useEffect(() => { load(); }, []);
 
-  const handleTrain = async (algoName) => {
-    setTraining(algoName);
-    setError('');
-    setSuccess('');
-    try {
-      await api.post('/ai-models/train', { algorithm: algoName }, { timeout: 120000 });
-      setSuccess(`Модель ${algoName} успішно натреновано`);
-      await load();
-    } catch (err) {
-      setError(err.code === 'ECONNABORTED' ? 'Тренування триває довше очікуваного. Спробуйте оновити сторінку за хвилину.' : (err.response?.data?.detail || 'Помилка тренування'));
-    } finally {
-      setTraining(null);
-    }
-  };
-
-  const handleActivate = async (modelId) => {
-    setError('');
-    setSuccess('');
-    try {
-      await api.patch(`/ai-models/models/${modelId}/activate`);
-      setSuccess('Модель успішно активовано');
-      await load();
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Помилка активації');
-    }
-  };
-
-  const handleTrainBestPerSport = async () => {
-    setTrainingAll(true);
-    setError('');
-    setSuccess('');
-    try {
-      const res = await api.post('/ai-models/train-best-per-sport', undefined, { timeout: 120000 });
-      const trained = res.data?.sports_trained ?? 0;
-      const skipped = res.data?.sports_skipped ?? 0;
-      setSuccess(skipped > 0
-        ? `best-per-sport завершено: натреновано ${trained}, пропущено ${skipped}`
-        : `best-per-sport завершено: натреновано ${trained} видів спорту`);
-      await load();
-    } catch (err) {
-      setError(err.code === 'ECONNABORTED' ? 'best-per-sport виконується довше очікуваного. Оновіть сторінку трохи пізніше.' : (err.response?.data?.detail || 'Помилка best-per-sport тренування'));
-    } finally {
-      setTrainingAll(false);
-    }
-  };
-
   if (loading) return (
     <div className="flex justify-center py-20">
       <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(59,130,246,0.2)', borderTopColor: '#3B82F6' }} />
     </div>
   );
 
+  const totalPredictions = status?.stats?.total_predictions ?? 0;
+  const completedMatches = status?.stats?.completed_matches ?? 0;
+  const sportsCovered = status?.stats?.sports_covered ?? 0;
+  const llmConnected = status?.llm?.connected ?? false;
+  const bestAcc = status?.ml?.best_accuracy;
+
   return (
     <div className="space-y-8">
+      {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">AI Моделі</h1>
-        <p className="text-sm mt-1" style={{ color: '#5a7a9a' }}>Управління моделями машинного навчання для прогнозування</p>
+        <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+          <Brain className="w-7 h-7" style={{ color: '#7C3AED' }} />
+          AI Аналітик
+        </h1>
+        <p className="text-sm mt-1" style={{ color: '#5a7a9a' }}>
+          Інтелектуальна система аналізу та прогнозування спортивних подій
+        </p>
       </div>
 
       {error && (
@@ -125,232 +64,208 @@ export default function AIModelsPage() {
         </div>
       )}
 
-      {success && (
-        <div className="rounded-xl px-4 py-3 text-sm" style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', color: '#6EE7B7' }}>
-          {success}
-        </div>
-      )}
+      {/* Status Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatusCard
+          icon={<Zap className="w-5 h-5" />}
+          title="LLM Провайдер"
+          value={status?.llm?.provider ?? '—'}
+          sub={llmConnected ? 'Підключено' : 'Не підключено'}
+          ok={llmConnected}
+          accent="#7C3AED"
+        />
+        <StatusCard
+          icon={<Brain className="w-5 h-5" />}
+          title="ML Модель"
+          value={bestAcc != null ? `${(bestAcc * 100).toFixed(1)}%` : '—'}
+          sub="Найкраща точність"
+          ok={bestAcc != null}
+          accent="#3B82F6"
+        />
+        <StatusCard
+          icon={<TrendingUp className="w-5 h-5" />}
+          title="Прогнози"
+          value={totalPredictions.toLocaleString()}
+          sub="Всього зроблено"
+          ok={totalPredictions > 0}
+          accent="#10B981"
+        />
+        <StatusCard
+          icon={<Activity className="w-5 h-5" />}
+          title="Бази даних"
+          value={completedMatches.toLocaleString()}
+          sub={`${sportsCovered} видів спорту`}
+          ok={completedMatches > 0}
+          accent="#F59E0B"
+        />
+      </div>
 
-      {diagError && (
-        <div className="rounded-xl px-4 py-3 text-sm" style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', color: '#FCD34D' }}>
-          {diagError}
-        </div>
-      )}
-
-      <div>
-        <h2 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: '#E2EEFF' }}>
-          <Cpu className="w-5 h-5" style={{ color: '#3B82F6' }} /> Доступні алгоритми
-        </h2>
-        <div className="mb-4 flex justify-end">
-          <button
-            onClick={handleTrainBestPerSport}
-            disabled={trainingAll || training !== null}
-            className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl text-sm font-medium hover:from-emerald-700 hover:to-teal-700 transition-all disabled:opacity-50"
-          >
-            {trainingAll ? 'Тренування по всіх видах...' : 'Train Best Per Sport'}
-          </button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {algorithms.map(algo => (
-            <div key={algo.name} className="glass-card p-5">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#7C3AED,#1D4ED8)' }}>
-                  <Brain className="w-5 h-5 text-white" />
-                </div>
-                <h3 className="font-bold text-white text-sm">{algo.display_name}</h3>
-              </div>
-              <p className="text-xs mb-4 leading-relaxed" style={{ color: '#5a7a9a' }}>{algo.description}</p>
-              <button
-                onClick={() => handleTrain(algo.name)}
-                disabled={training !== null}
-                className="w-full flex items-center justify-center gap-2 py-2.5 text-white rounded-xl text-sm font-medium transition-all disabled:opacity-50"
-                style={{ background: 'linear-gradient(135deg,#1D4ED8,#0891B2)' }}
-              >
-                {training === algo.name ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Тренування...</>
-                ) : (
-                  <><RefreshCw className="w-4 h-4" /> Тренувати</>
-                )}
-              </button>
+      {/* LLM Info */}
+      <div className="glass-card p-6">
+        <div className="flex items-start gap-4">
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
+               style={{ background: 'linear-gradient(135deg,#7C3AED,#1D4ED8)' }}>
+            <Brain className="w-7 h-7 text-white" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-1">
+              <h2 className="text-xl font-bold text-white">
+                {status?.llm?.model ?? 'llama-3.3-70b-versatile'}
+              </h2>
+              {llmConnected
+                ? <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={{ background: 'rgba(16,185,129,0.15)', color: '#10B981', border: '1px solid rgba(16,185,129,0.3)' }}>● Активний</span>
+                : <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={{ background: 'rgba(239,68,68,0.1)', color: '#FCA5A5', border: '1px solid rgba(239,68,68,0.2)' }}>● Не підключено</span>
+              }
             </div>
-          ))}
+            <p className="text-sm" style={{ color: '#5a7a9a' }}>
+              Провайдер: <span className="text-white font-medium">{status?.llm?.provider ?? '—'}</span>
+            </p>
+            <p className="text-sm mt-2 leading-relaxed" style={{ color: '#5a7a9a' }}>
+              Аналізує склади команд, статистику сезону, очні зустрічі та події матчу.
+              Генерує детальний прогноз українською мовою з поясненням ключових факторів.
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Trained Models */}
+      {/* Per-Sport Performance */}
       <div>
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: '#E2EEFF' }}>
-          <BarChart3 className="w-5 h-5" style={{ color: '#10B981' }} /> Навчені моделі
+          <BarChart3 className="w-5 h-5" style={{ color: '#10B981' }} />
+          Точність по видах спорту
         </h2>
-        {models.length === 0 ? (
+        {performance.length === 0 ? (
           <div className="glass-card text-center py-12">
-            <Brain className="w-12 h-12 mx-auto mb-3" style={{ color: '#3d6080' }} />
-            <p style={{ color: '#5a7a9a' }}>Моделей поки немає. Навчіть першу модель вище.</p>
+            <BarChart3 className="w-12 h-12 mx-auto mb-3" style={{ color: '#3d6080' }} />
+            <p style={{ color: '#5a7a9a' }}>Немає навчених моделей</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {models.map(model => (
-              <div
-                key={model.id}
-                className="glass-card p-5 transition-colors"
-                style={{ borderColor: model.is_active ? 'rgba(16,185,129,0.3)' : undefined, background: model.is_active ? 'rgba(16,185,129,0.05)' : undefined }}
-              >
-                <div className="flex items-center justify-between flex-wrap gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: model.is_active ? 'rgba(16,185,129,0.15)' : 'rgba(148,200,255,0.08)' }}>
-                      {model.is_active
-                        ? <CheckCircle2 className="w-6 h-6" style={{ color: '#10B981' }} />
-                        : <XCircle className="w-6 h-6" style={{ color: '#3d6080' }} />
-                      }
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-white">{model.name}</h3>
-                      <div className="flex items-center gap-3 mt-1 text-xs" style={{ color: '#5a7a9a' }}>
-                        <span className="font-mono px-2 py-0.5 rounded" style={{ background: 'rgba(59,130,246,0.1)', color: '#60a5fa' }}>{model.algorithm}</span>
-                        <span className="px-2 py-0.5 rounded" style={{ background: 'rgba(16,185,129,0.1)', color: '#6EE7B7' }}>
-                          {sportsMap[model.parameters?.dataset?.sport_id] || `sport_id=${model.parameters?.dataset?.sport_id ?? '—'}`}
-                        </span>
-                        <span>{model.trained_at ? new Date(model.trained_at).toLocaleDateString('uk-UA') : '—'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-6">
-                    {model.parameters?.validation_metrics?.accuracy != null && (
-                      <MetricPill label="Val Acc" value={model.parameters.validation_metrics.accuracy} />
-                    )}
-                    {model.parameters?.validation_metrics?.f1 != null && (
-                      <MetricPill label="Val F1" value={model.parameters.validation_metrics.f1} />
-                    )}
-                    {model.parameters?.cv_accuracy != null && (
-                      <MetricPill label="CV Acc" value={model.parameters.cv_accuracy} />
-                    )}
-                  </div>
-
-                  {!model.is_active && (
-                    <button
-                      onClick={() => handleActivate(model.id)}
-                      className="px-4 py-2 text-sm font-medium rounded-xl transition-colors"
-                      style={{ color: '#60a5fa', border: '1px solid rgba(59,130,246,0.3)' }}
-                    >
-                      Активувати
-                    </button>
-                  )}
-                  {model.is_active && (
-                    <span className="px-4 py-2 text-sm font-medium rounded-xl" style={{ background: 'rgba(16,185,129,0.15)', color: '#10B981', border: '1px solid rgba(16,185,129,0.3)' }}>
-                      Активна
-                    </span>
-                  )}
-                </div>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {performance.map(p => (
+              <SportPerformanceCard key={p.sport_id} p={p} />
             ))}
           </div>
         )}
       </div>
 
-      {/* Diagnostics Section */}
+      {/* Recent Analyses */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: '#E2EEFF' }}>
-            <Gauge className="w-5 h-5" style={{ color: '#818CF8' }} /> Діагностика моделей
+          <h2 className="text-lg font-bold flex items-center gap-2" style={{ color: '#E2EEFF' }}>
+            <Activity className="w-5 h-5" style={{ color: '#818CF8' }} />
+            Останні аналізи
           </h2>
-          <button
-            onClick={loadDiagnostics}
-            disabled={diagLoading}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
-          >
-            {diagLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Завантаження...</> : <><RefreshCw className="w-4 h-4" /> Запустити діагностику</>}
+          <button onClick={load} className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg transition-colors"
+                  style={{ color: '#60a5fa', border: '1px solid rgba(59,130,246,0.25)' }}>
+            <RefreshCw className="w-3.5 h-3.5" /> Оновити
           </button>
         </div>
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <div className="glass-card p-6">
-          <h2 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: '#E2EEFF' }}>
-            <Gauge className="w-5 h-5" style={{ color: '#818CF8' }} /> Rolling Backtest
-          </h2>
-          {diagLoading ? (
-            <div className="py-10 flex justify-center">
-              <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#3B82F6' }} />
-            </div>
-          ) : backtest?.backtest ? (
-            <>
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <MetricTile label="Acc" value={backtest.backtest.summary.accuracy} />
-                <MetricTile label="F1" value={backtest.backtest.summary.f1} />
-                <MetricTile label="Acc std" value={backtest.backtest.summary.accuracy_std} />
-                <MetricTile label="Вікна" value={backtest.backtest.summary.windows} isPercent={false} />
-              </div>
-              <p className="text-xs mb-3" style={{ color: '#5a7a9a' }}>
-                {backtest.season?.name} • {backtest.algorithm} • {backtest.dataset?.samples} матчів
-              </p>
-              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                {backtest.backtest.windows.map((w, idx) => (
-                  <div key={idx} className="rounded-lg px-3 py-2 text-xs flex items-center justify-between" style={{ border: '1px solid rgba(148,200,255,0.08)', background: 'rgba(148,200,255,0.03)' }}>
-                    <span style={{ color: '#5a7a9a' }}>train {w.train_samples} / test {w.test_samples}</span>
-                    <span className="font-semibold text-white">F1 {(w.f1 * 100).toFixed(1)}%</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <p className="text-sm" style={{ color: '#5a7a9a' }}>Недостатньо даних для rolling backtest.</p>
-          )}
-        </div>
-
-        <div className="glass-card p-6">
-          <h2 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: '#E2EEFF' }}>
-            <FlaskConical className="w-5 h-5" style={{ color: '#F59E0B' }} /> Feature Ablation
-          </h2>
-          {diagLoading ? (
-            <div className="py-10 flex justify-center">
-              <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#3B82F6' }} />
-            </div>
-          ) : ablation?.ablation ? (
-            <>
-              <div className="mb-4 text-xs" style={{ color: '#5a7a9a' }}>
-                Baseline F1: <span className="font-semibold text-white">{(ablation.ablation.baseline.f1 * 100).toFixed(1)}%</span>
-              </div>
-              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                {ablation.ablation.groups.map((g) => (
-                  <div key={g.group} className="rounded-lg px-3 py-2" style={{ border: '1px solid rgba(148,200,255,0.08)', background: 'rgba(148,200,255,0.03)' }}>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-white">{g.group}</span>
-                      <span className="font-semibold" style={{ color: g.delta_f1 < 0 ? '#EF4444' : '#10B981' }}>
-                        ΔF1 {(g.delta_f1 * 100).toFixed(1)}%
-                      </span>
-                    </div>
-                    <p className="text-xs mt-1" style={{ color: '#5a7a9a' }}>{g.size} фіч • F1 {(g.f1 * 100).toFixed(1)}%</p>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <p className="text-sm" style={{ color: '#5a7a9a' }}>Недостатньо даних для абляційного аналізу.</p>
-          )}
-        </div>
-        </div>
+        {recentAnalyses.length === 0 ? (
+          <div className="glass-card text-center py-12">
+            <Brain className="w-12 h-12 mx-auto mb-3" style={{ color: '#3d6080' }} />
+            <p style={{ color: '#5a7a9a' }}>Прогнозів ще немає. Відкрийте будь-який матч і натисніть «Отримати прогноз».</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {recentAnalyses.map(a => (
+              <RecentAnalysisRow key={a.id} a={a} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function MetricPill({ label, value }) {
-  const pct = (value * 100).toFixed(1);
-  const color = value >= 0.7 ? '#10B981' : value >= 0.5 ? '#F59E0B' : '#EF4444';
+function StatusCard({ icon, title, value, sub, ok, accent }) {
   return (
-    <div className="text-center">
-      <p className="text-lg font-bold" style={{ color }}>{pct}%</p>
-      <p className="text-[10px] uppercase tracking-wider" style={{ color: '#3d6080' }}>{label}</p>
+    <div className="glass-card p-5">
+      <div className="flex items-start justify-between mb-3">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${accent}22` }}>
+          <span style={{ color: accent }}>{icon}</span>
+        </div>
+        {ok
+          ? <CheckCircle2 className="w-4 h-4" style={{ color: '#10B981' }} />
+          : <XCircle className="w-4 h-4" style={{ color: '#EF4444' }} />
+        }
+      </div>
+      <p className="text-xs uppercase tracking-wider mb-1" style={{ color: '#3d6080' }}>{title}</p>
+      <p className="text-xl font-bold text-white">{value}</p>
+      <p className="text-xs mt-0.5" style={{ color: '#5a7a9a' }}>{sub}</p>
     </div>
   );
 }
 
-function MetricTile({ label, value, isPercent = true }) {
+function SportPerformanceCard({ p }) {
+  const acc = p.model_accuracy;
+  const color = acc == null ? '#3d6080' : acc >= 0.7 ? '#10B981' : acc >= 0.5 ? '#F59E0B' : '#EF4444';
   return (
-    <div className="rounded-xl px-3 py-2" style={{ background: 'rgba(148,200,255,0.05)', border: '1px solid rgba(148,200,255,0.08)' }}>
-      <p className="text-xs uppercase tracking-wider" style={{ color: '#3d6080' }}>{label}</p>
-      <p className="text-lg font-bold text-white">
-        {isPercent ? `${((value || 0) * 100).toFixed(1)}%` : value}
-      </p>
+    <div className="glass-card p-5">
+      <div className="flex items-center gap-3 mb-4">
+        <span className="text-2xl">{p.sport_icon || '🏆'}</span>
+        <div>
+          <h3 className="font-bold text-white text-sm">{p.sport_name}</h3>
+          <p className="text-xs" style={{ color: '#5a7a9a' }}>
+            {p.completed_matches.toLocaleString()} матчів · {p.predictions_made} прогнозів
+          </p>
+        </div>
+        {p.model_trained
+          ? <CheckCircle2 className="w-4 h-4 ml-auto flex-shrink-0" style={{ color: '#10B981' }} />
+          : <XCircle className="w-4 h-4 ml-auto flex-shrink-0" style={{ color: '#EF4444' }} />
+        }
+      </div>
+      {acc != null ? (
+        <div>
+          <div className="flex items-center justify-between text-xs mb-1" style={{ color: '#5a7a9a' }}>
+            <span>Точність</span>
+            <span className="font-semibold" style={{ color }}>{(acc * 100).toFixed(1)}%</span>
+          </div>
+          <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(148,200,255,0.08)' }}>
+            <div className="h-full rounded-full transition-all" style={{ width: `${acc * 100}%`, background: color }} />
+          </div>
+          {p.model_f1 != null && (
+            <p className="text-xs mt-2" style={{ color: '#5a7a9a' }}>
+              F1: <span className="text-white">{(p.model_f1 * 100).toFixed(1)}%</span>
+            </p>
+          )}
+        </div>
+      ) : (
+        <p className="text-xs" style={{ color: '#5a7a9a' }}>Модель ще не навчена</p>
+      )}
     </div>
   );
 }
+
+function RecentAnalysisRow({ a }) {
+  const hwp = (a.home_win_probability * 100).toFixed(0);
+  const awp = (a.away_win_probability * 100).toFixed(0);
+  const dp = a.draw_probability != null ? (a.draw_probability * 100).toFixed(0) : null;
+  return (
+    <a href={`/matches/${a.match_id}`}
+       className="glass-card p-4 flex items-center gap-4 hover:border-blue-500/30 transition-all cursor-pointer"
+       style={{ textDecoration: 'none', display: 'flex' }}>
+      <span className="text-xl flex-shrink-0">{a.sport_icon || '🏆'}</span>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="font-semibold text-white text-sm truncate">
+            {a.home_team} vs {a.away_team}
+          </p>
+          {a.has_analysis && (
+            <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium"
+                  style={{ background: 'rgba(124,58,237,0.15)', color: '#a78bfa' }}>AI</span>
+          )}
+        </div>
+        <p className="text-xs mt-0.5" style={{ color: '#5a7a9a' }}>
+          {a.sport} · {a.match_date ? formatUkrDate(a.match_date) : ''}
+        </p>
+      </div>
+      <div className="flex items-center gap-3 flex-shrink-0 text-xs font-semibold">
+        <span style={{ color: '#60a5fa' }}>{hwp}%</span>
+        {dp != null && <span style={{ color: '#94a3b8' }}>{dp}%</span>}
+        <span style={{ color: '#f87171' }}>{awp}%</span>
+      </div>
+      <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: '#3d6080' }} />
+    </a>
+  );
+}
+

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { Trophy, TrendingUp } from 'lucide-react';
+import { useSportMode } from '../context/SportModeContext';
 
 const FORM_COLOR = { W: '#10B981', D: '#F59E0B', L: '#EF4444' };
 
 export default function StandingsPage() {
+  const { activeSportId, theme, activeSport } = useSportMode();
   const [seasons, setSeasons] = useState([]);
   const [seasonId, setSeasonId] = useState('');
   const [rows, setRows] = useState([]);
@@ -12,10 +14,14 @@ export default function StandingsPage() {
   const [seasonsLoading, setSeasonsLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Load all seasons once
+  // Load seasons filtered by active sport
   useEffect(() => {
     setError('');
-    api.get('/sports/seasons')
+    setSeasonsLoading(true);
+    setSeasonId('');
+    setRows([]);
+    const params = activeSportId ? { sport_id: activeSportId } : {};
+    api.get('/sports/seasons', { params })
       .then(res => {
         const s = res.data;
         setSeasons(s);
@@ -26,7 +32,7 @@ export default function StandingsPage() {
         setError('Не вдалося завантажити список сезонів');
       })
       .finally(() => setSeasonsLoading(false));
-  }, []);
+  }, [activeSportId, activeSport]);
 
   // Load standings when season changes
   useEffect(() => {
@@ -66,7 +72,7 @@ export default function StandingsPage() {
 
       {currentSeason && (
         <div className="flex items-center gap-2 text-sm" style={{ color: '#5a7a9a' }}>
-          <Trophy className="w-4 h-4" style={{ color: '#F59E0B' }} />
+          <Trophy className="w-4 h-4" style={{ color: theme.accent2 }} />
           <span>{currentSeason.name}</span>
         </div>
       )}
@@ -84,7 +90,7 @@ export default function StandingsPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead style={{ background: 'rgba(148,200,255,0.04)', borderBottom: '1px solid rgba(148,200,255,0.08)' }}>
+              <thead style={{ background: `${theme.accent}08`, borderBottom: `1px solid ${theme.accent}12` }}>
                 <tr className="text-left text-xs uppercase tracking-wider" style={{ color: '#3d6080' }}>
                   <th className="px-4 py-3 font-medium w-10">#</th>
                   <th className="px-4 py-3 font-medium">Команда</th>
@@ -96,7 +102,7 @@ export default function StandingsPage() {
                   <th className="px-4 py-3 font-medium text-center">ГП</th>
                   <th className="px-4 py-3 font-medium text-center">±</th>
                   <th className="px-4 py-3 font-medium text-center">Форма</th>
-                  <th className="px-4 py-3 font-medium text-center text-blue-600">Очки</th>
+                  <th className="px-4 py-3 font-medium text-center" style={{ color: theme.accent }}>Очки</th>
                 </tr>
               </thead>
               <tbody>
@@ -105,10 +111,10 @@ export default function StandingsPage() {
                   const isTop3 = idx < 3;
                   const isBottom3 = idx >= rows.length - 3;
                   return (
-                    <tr key={row.id} className="transition-colors" style={{ borderBottom: '1px solid rgba(148,200,255,0.05)', background: isTop3 ? 'rgba(16,185,129,0.04)' : isBottom3 ? 'rgba(239,68,68,0.04)' : 'transparent' }}>
+                    <tr key={row.id} className="transition-colors" style={{ borderBottom: '1px solid rgba(148,200,255,0.05)', background: isTop3 ? `${theme.accent}06` : isBottom3 ? 'rgba(239,68,68,0.04)' : 'transparent' }}>
                       <td className="px-4 py-3 font-bold text-center">
                         {idx + 1 <= 3
-                          ? <span style={{ color: '#10B981' }}>{idx + 1}</span>
+                          ? <span style={{ color: theme.accent2 }}>{idx + 1}</span>
                           : idx + 1 >= rows.length - 2
                             ? <span style={{ color: '#EF4444' }}>{idx + 1}</span>
                             : <span style={{ color: '#5a7a9a' }}>{idx + 1}</span>}
@@ -118,7 +124,7 @@ export default function StandingsPage() {
                           {row.team?.logo_url ? (
                             <img src={row.team.logo_url} alt={row.team.name} className="w-6 h-6 object-contain rounded" />
                           ) : (
-                            <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0" style={{ background: 'linear-gradient(135deg,#1D4ED8,#0891B2)' }}>
+                            <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0" style={{ background: theme.gradient }}>
                               {row.team?.name?.charAt(0)}
                             </div>
                           )}
@@ -148,7 +154,7 @@ export default function StandingsPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-white font-bold text-sm" style={{ background: 'linear-gradient(135deg,#1D4ED8,#0891B2)' }}>
+                        <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-white font-bold text-sm" style={{ background: theme.gradient }}>
                           {row.points}
                         </span>
                       </td>
@@ -163,7 +169,7 @@ export default function StandingsPage() {
 
       {rows.length > 0 && (
         <div className="flex items-center gap-6 text-xs" style={{ color: '#5a7a9a' }}>
-          <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm inline-block" style={{ background: 'rgba(16,185,129,0.2)', border: '1px solid rgba(16,185,129,0.4)' }} /> Топ 3 — кваліфікація</div>
+          <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm inline-block" style={{ background: `${theme.accent}30`, border: `1px solid ${theme.accent}60` }} /> Топ 3 — кваліфікація</div>
           <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm inline-block" style={{ background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.4)' }} /> Низ 3 — вильот</div>
         </div>
       )}
@@ -188,3 +194,4 @@ function SkeletonTable() {
     </div>
   );
 }
+

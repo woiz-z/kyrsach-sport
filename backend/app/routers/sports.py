@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List
-from app.database import get_db, async_session
+from app.database import get_db
 from app.models.models import Sport, Season
 from app.schemas.schemas import SportCreate, SportResponse, SeasonResponse
 from app.services.auth import get_current_user
@@ -45,14 +45,3 @@ async def create_sport(data: SportCreate, db: AsyncSession = Depends(get_db), _=
     await db.refresh(sport)
     return sport
 
-
-@router.post("/admin/sync-esports", status_code=202)
-async def admin_sync_esports(background_tasks: BackgroundTasks):
-    """Trigger esports data import in the background (admin use only)."""
-    async def _run():
-        from app.services.real_data_importer import import_esports_data
-        async with async_session() as db:
-            await import_esports_data(db)
-
-    background_tasks.add_task(_run)
-    return {"status": "esports import started in background"}

@@ -26,7 +26,11 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/sports_predict
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
-      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.0-flash}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-nvidia/nemotron-3-super-120b-a12b:free}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
       AUTO_SYNC_REAL_DATA: "true"
       AUTO_SYNC_FOOTBALL_DATA: "false"
       AUTO_SIMULATE_PAST_MATCHES: "true"
@@ -36,11 +40,13 @@ services:
       SMTP_PASSWORD: blvfaosihqqtuzmo
       SMTP_FROM: a7654837383@gmail.com
       FRONTEND_URL: http://localhost:5173
+      AVATAR_CACHE_DIR: /var/cache/sportpredict/avatars
     depends_on:
       db:
         condition: service_healthy
     volumes:
       - ./backend:/app
+      - avatar_cache:/var/cache/sportpredict/avatars
     working_dir: /app
     command: >
       sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
@@ -51,9 +57,12 @@ services:
     container_name: sports_predict_frontend
     ports:
       - "5173:80"
+    environment:
+      BACKEND_URL: http://backend:8000
     depends_on:
       - backend
     restart: unless-stopped
 
 volumes:
   pgdata:
+  avatar_cache:

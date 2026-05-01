@@ -8,22 +8,21 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "dev-only-insecure-key-override-via-dotenv-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
-    GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+
+    # Google Gemini (fallback LLM)
+    GOOGLE_API_KEY: str = ""
+    GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
+    GEMINI_MODEL: str = "gemini-2.0-flash"
+
+    # OpenRouter — основний LLM провайдер (безкоштовні моделі)
+    # Ключ: https://openrouter.ai/keys
     OPENROUTER_API_KEY: str = ""
+    OPENROUTER_MODEL: str = "nvidia/nemotron-3-super-120b-a12b:free"
+    # Live analysis uses a fast non-reasoning model for clean streaming
+    OPENROUTER_LIVE_MODEL: str = "meta-llama/llama-3.3-70b-instruct:free"
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
-    OPENROUTER_MODEL: str = "openrouter/hunter-alpha"
     AUTO_SYNC_REAL_DATA: bool = True
     AUTO_SIMULATE_PAST_MATCHES: bool = False
-    AUTO_RETRY_ESPORTS_IMPORT: bool = True
-    ESPORTS_RETRY_INITIAL_DELAY_SECONDS: int = 45
-    ESPORTS_RETRY_MAX_DELAY_SECONDS: int = 1800
-    AUTO_RETRAIN_MODELS: bool = False
-    MODEL_RETRAIN_INTERVAL_SECONDS: int = 86400
-    MODEL_RETRAIN_MIN_SAMPLES: int = 30
-    AUTO_SYNC_FOOTBALL_DATA: bool = False
-    FOOTBALL_DATA_MIN_SEASON: int = 2324
-    FOOTBALL_DATA_MAX_LINKS: int = 0
 
     # SMTP / email settings
     SMTP_HOST: str = "smtp.gmail.com"
@@ -32,6 +31,7 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = ""
     FRONTEND_URL: str = "http://localhost:5173"
+    AVATAR_CACHE_DIR: str = "/var/cache/sportpredict/avatars"
 
     class Config:
         env_file = ".env"

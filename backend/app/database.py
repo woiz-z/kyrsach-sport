@@ -20,3 +20,8 @@ async def get_db():
         except Exception:
             await session.rollback()
             raise
+
+
+async def get_session_factory():
+    """Dependency that yields the session factory (for background tasks)."""
+    yield async_session

@@ -2,29 +2,25 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { Search, MapPin, Trophy } from 'lucide-react';
+import { useSportMode } from '../context/SportModeContext';
 
 export default function TeamsPage() {
+  const { activeSportId, theme, activeSport } = useSportMode();
   const [teams, setTeams] = useState([]);
   const [search, setSearch] = useState('');
-  const [sports, setSports] = useState([]);
-  const [sportFilter, setSportFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     setError('');
     setLoading(true);
-    Promise.all([
-      api.get('/teams/', { params: sportFilter ? { sport_id: sportFilter } : {} }),
-      api.get('/sports/'),
-    ]).then(([t, s]) => {
-      setTeams(t.data);
-      setSports(s.data);
-    }).catch((err) => {
-      console.error('Failed to load teams:', err);
-      setError('Не вдалося завантажити команди');
-    }).finally(() => setLoading(false));
-  }, [sportFilter]);
+    api.get('/teams/', { params: activeSportId ? { sport_id: activeSportId } : {} })
+      .then(res => setTeams(res.data))
+      .catch((err) => {
+        console.error('Failed to load teams:', err);
+        setError('Не вдалося завантажити команди');
+      }).finally(() => setLoading(false));
+  }, [activeSportId, activeSport]);
 
   const filtered = teams.filter(t =>
     t.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -33,7 +29,7 @@ export default function TeamsPage() {
 
   if (loading) return (
     <div className="flex justify-center py-20">
-      <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(59,130,246,0.2)', borderTopColor: '#3B82F6' }} />
+      <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: `${theme.accent}30`, borderTopColor: theme.accent }} />
     </div>
   );
 
@@ -43,28 +39,15 @@ export default function TeamsPage() {
         <h1 className="text-2xl font-bold text-white">Команди</h1>
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#3d6080' }} />
-          <input
-            type="text"
-            placeholder="Пошук команди..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="dark-input w-full pl-10 pr-4 py-2.5 text-sm"
-          />
-        </div>
-        {sports.length > 1 && (
-          <select
-            value={sportFilter}
-            onChange={e => setSportFilter(e.target.value)}
-            className="dark-input px-4 py-2.5 text-sm"
-          >
-            <option value="">Усі види спорту</option>
-            {sports.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-        )}
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#3d6080' }} />
+        <input
+          type="text"
+          placeholder="Пошук команди..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="dark-input w-full pl-10 pr-4 py-2.5 text-sm"
+        />
       </div>
 
       {error ? (
@@ -76,7 +59,7 @@ export default function TeamsPage() {
               <Link
                 key={team.id}
                 to={`/teams/${team.id}`}
-                className="glass-card p-5 hover:border-blue-500/20 transition-all group"
+                className="glass-card p-5 transition-all group"
                 style={{ display: 'block' }}
               >
                 <div className="flex items-start gap-4">
@@ -85,16 +68,16 @@ export default function TeamsPage() {
                       src={team.logo_url}
                       alt={team.name}
                       className="w-14 h-14 rounded-xl object-contain shrink-0"
-                      style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)' }}
+                      style={{ background: `${theme.accent}10`, border: `1px solid ${theme.accent}20` }}
                     />
                   ) : (
-                    <div className="w-14 h-14 rounded-xl flex items-center justify-center text-white text-xl font-bold shrink-0" style={{ background: 'linear-gradient(135deg, #1D4ED8, #10B981)' }}>
+                    <div className="w-14 h-14 rounded-xl flex items-center justify-center text-white text-xl font-bold shrink-0" style={{ background: theme.gradient }}>
                       {team.name.charAt(0)}
                     </div>
                   )}
 
                   <div className="min-w-0">
-                    <h3 className="font-bold text-white group-hover:text-blue-400 transition-colors truncate">
+                    <h3 className="font-bold text-white transition-colors truncate">
                       {team.name}
                     </h3>
                     {team.city && (

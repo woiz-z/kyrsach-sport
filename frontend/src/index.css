@@ -17,6 +17,22 @@
   --font-sans: 'Manrope', system-ui, -apple-system, sans-serif;
 }
 
+/* Sport mode CSS variables (defaults — overridden by Layout.jsx) */
+:root {
+  --sport-accent: #3B82F6;
+  --sport-accent2: #06B6D4;
+  --sport-glow: rgba(59,130,246,0.35);
+  --sport-gradient: linear-gradient(135deg,#1D4ED8,#0891B2);
+  --sport-gradient-text: linear-gradient(135deg,#60a5fa 0%,#06b6d4 100%);
+  --sport-card-border: rgba(148,200,255,0.08);
+  --sport-input-focus: rgba(59,130,246,0.6);
+  --sport-input-focus-shadow: rgba(59,130,246,0.12);
+  --sport-scrollbar: rgba(59,130,246,0.35);
+  --sport-radial1: rgba(59,130,246,0.08);
+  --sport-radial2: rgba(6,182,212,0.06);
+  --sport-radial3: rgba(124,58,237,0.04);
+}
+
 /* Hide browser native password reveal/credential buttons */
 input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear {
@@ -34,6 +50,7 @@ body {
   background: #060E1C;
   color: #E2EEFF;
   margin: 0;
+  transition: background 0.4s ease;
 }
 
 h1, h2, h3 {
@@ -48,32 +65,51 @@ h1, h2, h3 {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(59,130,246,0.3);
+  background: var(--sport-scrollbar);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(59,130,246,0.5);
+  background: var(--sport-accent);
 }
 
 /* ─── Glassmorphism card ─── */
 .glass-card {
-  background: rgba(13, 27, 46, 0.8);
-  border: 1px solid rgba(148, 200, 255, 0.08);
-  backdrop-filter: blur(12px);
+  background: rgba(13, 27, 46, 0.30);
+  border: 1px solid var(--sport-card-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-radius: 16px;
+  transition: border-color 0.3s ease;
 }
 
 /* ─── Glow utilities ─── */
+.glow-sport { box-shadow: 0 0 24px var(--sport-glow); }
 .glow-blue  { box-shadow: 0 0 24px rgba(59,130,246,0.35); }
 .glow-cyan  { box-shadow: 0 0 24px rgba(6,182,212,0.35); }
 .glow-green { box-shadow: 0 0 24px rgba(16,185,129,0.35); }
 
 /* ─── Gradient text ─── */
 .gradient-text {
-  background: linear-gradient(135deg, #60a5fa 0%, #06b6d4 100%);
+  background: var(--sport-gradient-text);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.brand-gradient-text {
+  display: inline-block;
+  line-height: 1;
+  color: var(--sport-accent2);
+}
+
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .brand-gradient-text {
+    background: var(--sport-gradient-text);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
 }
 
 /* ─── Mesh background on body ─── */
@@ -82,18 +118,21 @@ body::before {
   position: fixed;
   inset: 0;
   background-image:
-    radial-gradient(circle at 15% 20%, rgba(59,130,246,0.08) 0%, transparent 50%),
-    radial-gradient(circle at 85% 80%, rgba(6,182,212,0.06) 0%, transparent 50%),
-    radial-gradient(circle at 50% 50%, rgba(124,58,237,0.04) 0%, transparent 60%);
+    radial-gradient(circle at 15% 20%, var(--sport-radial1) 0%, transparent 50%),
+    radial-gradient(circle at 85% 80%, var(--sport-radial2) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, var(--sport-radial3) 0%, transparent 60%);
   pointer-events: none;
   z-index: 0;
+  transition: background-image 0.4s ease;
 }
 #root { position: relative; z-index: 1; }
 
 /* ─── Dark form inputs ─── */
 .dark-input {
-  background: rgba(13, 27, 46, 0.7);
+  background: rgba(13, 27, 46, 0.28);
   border: 1px solid rgba(148, 200, 255, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: #E2EEFF;
   border-radius: 12px;
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -101,33 +140,35 @@ body::before {
 .dark-input::placeholder { color: #3d6080; }
 .dark-input:focus {
   outline: none;
-  border-color: rgba(59,130,246,0.6);
-  box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+  border-color: var(--sport-input-focus);
+  box-shadow: 0 0 0 3px var(--sport-input-focus-shadow);
 }
 .dark-input option { background: #0D1B2E; color: #E2EEFF; }
 
 /* ─── Stat card hover ─── */
 .stat-card {
-  background: linear-gradient(135deg, #0D1B2E 0%, #0f2244 100%);
+  background: linear-gradient(135deg, rgba(13,27,46,0.30) 0%, rgba(15,34,68,0.30) 100%);
   border: 1px solid rgba(148, 200, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-radius: 16px;
   transition: border-color 0.25s, box-shadow 0.25s, transform 0.2s;
 }
 .stat-card:hover {
-  border-color: rgba(59,130,246,0.3);
-  box-shadow: 0 8px 32px rgba(59,130,246,0.15);
+  border-color: var(--sport-accent);
+  box-shadow: 0 8px 32px var(--sport-glow);
   transform: translateY(-2px);
 }
 
 /* ─── Nav link active glow ─── */
 .nav-active {
-  background: linear-gradient(135deg, #1D4ED8 0%, #0891B2 100%);
-  box-shadow: 0 4px 20px rgba(29,78,216,0.45);
+  background: var(--sport-gradient) !important;
+  box-shadow: 0 4px 20px var(--sport-glow);
   color: #fff !important;
 }
 
 /* ─── Table row hover ─── */
-.dark-row:hover { background: rgba(59,130,246,0.06); }
+.dark-row:hover { background: rgba(148,200,255,0.04); }
 
 @keyframes slide-in {
   from { opacity: 0; transform: translateX(100%); }
@@ -136,8 +177,8 @@ body::before {
 .animate-slide-in { animation: slide-in 0.3s ease-out; }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 12px rgba(59,130,246,0.3); }
-  50% { box-shadow: 0 0 28px rgba(59,130,246,0.6); }
+  0%, 100% { box-shadow: 0 0 12px var(--sport-glow); }
+  50% { box-shadow: 0 0 28px var(--sport-accent); }
 }
 .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
 

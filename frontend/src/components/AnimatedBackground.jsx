@@ -1,24 +1,17 @@
 import { useEffect, useRef } from 'react';
+import { useSportMode } from '../context/SportModeContext';
 
 const PARTICLE_COUNT = 70;
 const MAX_DIST = 130;
 const SPEED = 0.28;
 
-// Sport-themed accent colors
-const COLORS = [
-  [59, 130, 246],   // blue
-  [8, 145, 178],    // cyan
-  [16, 185, 129],   // green
-  [139, 92, 246],   // purple (rare)
-];
-
 function rand(min, max) {
   return Math.random() * (max - min) + min;
 }
 
-function initParticles(w, h) {
+function initParticles(w, h, colors) {
   return Array.from({ length: PARTICLE_COUNT }, () => {
-    const color = COLORS[Math.floor(Math.random() * (Math.random() < 0.15 ? 4 : 3))];
+    const color = colors[Math.floor(Math.random() * colors.length)];
     return {
       x: rand(0, w),
       y: rand(0, h),
@@ -28,12 +21,13 @@ function initParticles(w, h) {
       color,
       pulse: rand(0, Math.PI * 2),
       pulseSpeed: rand(0.008, 0.02),
-      bright: Math.random() < 0.18, // ~18% are bright "hub" nodes
+      bright: Math.random() < 0.18,
     };
   });
 }
 
 export default function AnimatedBackground() {
+  const { theme } = useSportMode();
   const canvasRef = useRef(null);
   const stateRef = useRef({ particles: [], animId: null, w: 0, h: 0 });
 
@@ -42,11 +36,12 @@ export default function AnimatedBackground() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const state = stateRef.current;
+    const colors = theme?.particleColors || [[59, 130, 246], [8, 145, 178], [16, 185, 129]];
 
     const resize = () => {
       state.w = canvas.width = window.innerWidth;
       state.h = canvas.height = window.innerHeight;
-      state.particles = initParticles(state.w, state.h);
+      state.particles = initParticles(state.w, state.h, colors);
     };
 
     resize();
@@ -117,13 +112,13 @@ export default function AnimatedBackground() {
       window.removeEventListener('resize', resize);
       cancelAnimationFrame(state.animId);
     };
-  }, []);
+  }, [theme]);
 
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 z-0 pointer-events-none"
-      style={{ opacity: 0.85 }}
+      className="fixed inset-0 pointer-events-none"
+      style={{ zIndex: 1, opacity: 0.35 }}
     />
   );
 }

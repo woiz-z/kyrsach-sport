@@ -116,6 +116,7 @@ class PlayerCreate(BaseModel):
     position: Optional[str] = None
     date_of_birth: Optional[date] = None
     nationality: Optional[str] = None
+    photo_url: Optional[str] = None
 
 
 class PlayerResponse(BaseModel):
@@ -125,6 +126,68 @@ class PlayerResponse(BaseModel):
     position: Optional[str]
     date_of_birth: Optional[date]
     nationality: Optional[str]
+    photo_url: Optional[str] = None
+    height_cm: Optional[int] = None
+    weight_kg: Optional[int] = None
+    jersey_number: Optional[int] = None
+    espn_id: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class TeamBriefResponse(BaseModel):
+    id: int
+    name: str
+    logo_url: Optional[str] = None
+    sport_id: int
+
+    class Config:
+        from_attributes = True
+
+
+class CareerStatsResponse(BaseModel):
+    appearances: int = 0
+    starts: int = 0
+    minutes_played: int = 0
+    goals: int = 0
+    assists: int = 0
+    yellow_cards: int = 0
+    red_cards: int = 0
+
+
+class RecentMatchResponse(BaseModel):
+    match_id: int
+    match_date: Optional[datetime] = None
+    home_team: str
+    away_team: str
+    home_score: Optional[int] = None
+    away_score: Optional[int] = None
+    is_starter: Optional[bool] = None
+    minutes_played: Optional[int] = None
+    goals_in_match: int = 0
+    assists_in_match: int = 0
+
+    class Config:
+        from_attributes = True
+
+
+class PlayerDetailResponse(BaseModel):
+    id: int
+    name: str
+    position: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    nationality: Optional[str] = None
+    photo_url: Optional[str] = None
+    height_cm: Optional[int] = None
+    weight_kg: Optional[int] = None
+    jersey_number: Optional[int] = None
+    espn_id: Optional[str] = None
+    age: Optional[int] = None
+    bio: Optional[str] = None
+    team: Optional[TeamBriefResponse] = None
+    career_stats: CareerStatsResponse = CareerStatsResponse()
+    recent_matches: List[RecentMatchResponse] = []
 
     class Config:
         from_attributes = True
@@ -184,10 +247,55 @@ class MatchResponse(BaseModel):
 
 
 class MatchDetailResponse(MatchResponse):
+    external_id: Optional[str] = None
+    enriched: Optional[bool] = None
     home_team: Optional[TeamResponse] = None
     away_team: Optional[TeamResponse] = None
     sport: Optional[SportResponse] = None
     season: Optional[SeasonResponse] = None
+
+
+# ── Match Lineup / Events / Stats ──────────────────────
+class MatchLineupEntry(BaseModel):
+    player_id: int
+    player_name: str
+    team_id: int
+    is_starter: bool
+    position: Optional[str] = None
+    jersey_number: Optional[int] = None
+    minutes_played: Optional[int] = None
+    photo_url: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class MatchEventEntry(BaseModel):
+    id: int
+    event_type: str
+    minute: Optional[int] = None
+    detail: Optional[str] = None
+    team_id: Optional[int] = None
+    player_id: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
+class MatchStatsEntry(BaseModel):
+    is_home: bool
+    stats: Optional[dict] = None
+
+    class Config:
+        from_attributes = True
+
+
+class MatchRichDetail(MatchDetailResponse):
+    home_lineup: List[MatchLineupEntry] = []
+    away_lineup: List[MatchLineupEntry] = []
+    events: List[MatchEventEntry] = []
+    home_stats: Optional[dict] = None
+    away_stats: Optional[dict] = None
 
 
 # ── Team Statistics ────────────────────────────────────
@@ -221,24 +329,6 @@ class HeadToHeadResponse(BaseModel):
     team1_wins: int
     team2_wins: int
     draws: int
-
-    class Config:
-        from_attributes = True
-
-
-# ── AI Model ──────────────────────────────────────────
-class AIModelResponse(BaseModel):
-    id: int
-    name: str
-    description: Optional[str]
-    algorithm: str
-    accuracy: Optional[float]
-    precision_score: Optional[float]
-    recall_score: Optional[float]
-    f1: Optional[float]
-    trained_at: Optional[datetime]
-    is_active: bool
-    parameters: Optional[dict] = None
 
     class Config:
         from_attributes = True
@@ -284,3 +374,19 @@ class DashboardStats(BaseModel):
     accuracy_percent: float
     total_teams: int
     total_sports: int
+
+
+# ── News ───────────────────────────────────────────────
+class NewsArticleResponse(BaseModel):
+    id: int
+    title: str
+    summary: Optional[str] = None
+    url: str
+    image_url: Optional[str] = None
+    source: Optional[str] = None
+    language: Optional[str] = None
+    published_at: Optional[datetime] = None
+    fetched_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../services/api';
 import { ArrowLeft, MapPin, Trophy, Users, TrendingUp, Calendar } from 'lucide-react';
+import PlayerAvatar from '../components/PlayerAvatar';
 
 export default function TeamDetailPage() {
   const { id } = useParams();
@@ -127,11 +128,9 @@ export default function TeamDetailPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2">
             {players.map(p => (
               <div key={p.id} className="flex items-center gap-3 px-6 py-3" style={{ borderBottom: '1px solid rgba(148,200,255,0.05)' }}>
-                <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold" style={{ background: 'linear-gradient(135deg,#1D4ED8,#0891B2)' }}>
-                  {p.name?.charAt(0)?.toUpperCase() ?? '?'}
-                </div>
+                <PlayerAvatar name={p.name} photoUrl={p.photo_url} playerId={p.id} />
                 <div>
-                  <p className="font-medium text-sm text-white">{p.name}</p>
+                  <Link to={`/players/${p.id}`} className="font-medium text-sm text-white hover:text-blue-400 transition-colors">{p.name}</Link>
                   <p className="text-xs" style={{ color: '#5a7a9a' }}>{p.position}</p>
                 </div>
               </div>

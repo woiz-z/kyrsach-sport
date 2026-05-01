@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
+import { formatUkrDate, formatUkrDateTime } from '../utils/date';
 import {
   BarChart3, Trophy, CalendarDays, Zap, Target, Users, TrendingUp, Activity
 } from 'lucide-react';
@@ -8,21 +9,21 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend
 } from 'recharts';
 import SportBadge from '../components/SportBadge';
+import { useSportMode } from '../context/SportModeContext';
 
 const STAT_CARDS = [
-  { label: 'Всього матчів',   key: 'total_matches',     icon: CalendarDays, color: '#3B82F6', glow: 'rgba(59,130,246,0.35)' },
-  { label: 'Завершено',       key: 'completed_matches', icon: Trophy,       color: '#10B981', glow: 'rgba(16,185,129,0.35)' },
-  { label: 'Заплановано',     key: 'upcoming_matches',  icon: Activity,     color: '#F59E0B', glow: 'rgba(245,158,11,0.35)' },
-  { label: 'Всього прогнозів',key: 'total_predictions', icon: Zap,          color: '#8B5CF6', glow: 'rgba(139,92,246,0.35)' },
-  { label: 'Вірних прогнозів',key: 'correct_predictions',icon: Target,      color: '#10B981', glow: 'rgba(16,185,129,0.35)' },
-  { label: 'Точність AI',     key: 'accuracy_percent',  icon: TrendingUp,   color: '#06B6D4', glow: 'rgba(6,182,212,0.35)', suffix: '%' },
-  { label: 'Команд',          key: 'total_teams',       icon: Users,        color: '#EC4899', glow: 'rgba(236,72,153,0.35)' },
-  { label: 'Видів спорту',    key: 'total_sports',      icon: BarChart3,    color: '#F59E0B', glow: 'rgba(245,158,11,0.35)' },
+  { label: 'Всього матчів',   key: 'total_matches',      icon: CalendarDays },
+  { label: 'Завершено',       key: 'completed_matches',  icon: Trophy       },
+  { label: 'Заплановано',     key: 'upcoming_matches',   icon: Activity     },
+  { label: 'Всього прогнозів',key: 'total_predictions',  icon: Zap          },
+  { label: 'Вірних прогнозів',key: 'correct_predictions',icon: Target       },
+  { label: 'Точність AI',     key: 'accuracy_percent',   icon: TrendingUp,  suffix: '%' },
+  { label: 'Команд',          key: 'total_teams',        icon: Users        },
+  { label: 'Видів спорту',    key: 'total_sports',       icon: BarChart3    },
 ];
 
-const PIE_COLORS = ['#10B981', '#3B82F6'];
-
 export default function DashboardPage() {
+  const { activeSportId, theme, activeSport } = useSportMode();
   const [stats, setStats] = useState(null);
   const [upcoming, setUpcoming] = useState([]);
   const [recentPreds, setRecentPreds] = useState([]);
@@ -31,10 +32,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setError('');
+    setLoading(true);
+    const sportParam = activeSportId ? { sport_id: activeSportId } : {};
     Promise.allSettled([
-      api.get('/dashboard/stats'),
-      api.get('/matches/upcoming?limit=5'),
-      api.get('/predictions/?limit=5'),
+      api.get('/dashboard/stats', { params: sportParam }),
+      api.get('/matches/upcoming', { params: { limit: 5, ...sportParam } }),
+      api.get('/predictions/', { params: { limit: 5, ...sportParam } }),
     ]).then(([s, u, p]) => {
       if (s.status === 'fulfilled') setStats(s.value.data);
       if (u.status === 'fulfilled') setUpcoming(u.value.data);
@@ -42,9 +45,9 @@ export default function DashboardPage() {
       if ([s, u, p].every(r => r.status === 'rejected'))
         setError('Не вдалося завантажити дані дашборду.');
     }).finally(() => setLoading(false));
-  }, []);
+  }, [activeSportId, activeSport]);
 
-  if (loading) return <LoadingSpinner />;
+  if (loading) return <LoadingSpinner accentColor={theme.accent} />;
 
   if (error) return (
     <div className="space-y-4">
@@ -57,10 +60,10 @@ export default function DashboardPage() {
     { name: 'Завершено', value: stats.completed_matches },
     { name: 'Заплановано', value: stats.upcoming_matches },
   ] : [];
+  const PIE_COLORS = [theme.accent2, theme.accent];
 
   return (
     <div className="space-y-8 animate-float-up">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-white">Дашборд</h1>
         <p className="mt-1 text-sm" style={{ color: '#5a7a9a' }}>Огляд системи прогнозування SportPredict AI</p>
@@ -76,11 +79,11 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: `${card.color}18`, boxShadow: `0 0 16px ${card.glow}` }}
+                  style={{ background: `${theme.accent}18`, boxShadow: `0 0 16px ${theme.glow}` }}
                 >
-                  <card.icon className="w-5 h-5" style={{ color: card.color }} />
+                  <card.icon className="w-5 h-5" style={{ color: theme.accent2 }} />
                 </div>
-                <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: `${card.color}18`, color: card.color }}>
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: `${theme.accent}18`, color: theme.accent2 }}>
                   live
                 </span>
               </div>
@@ -98,7 +101,7 @@ export default function DashboardPage() {
         <div className="glass-card p-6">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-base font-bold text-white">Найближчі матчі</h2>
-            <Link to="/matches" className="text-xs font-semibold hover:text-blue-300 transition-colors" style={{ color: '#3B82F6' }}>
+            <Link to="/matches" className="text-xs font-semibold transition-colors" style={{ color: theme.accent2 }}>
               Всі матчі →
             </Link>
           </div>
@@ -107,12 +110,13 @@ export default function DashboardPage() {
               <p className="text-center py-8 text-sm" style={{ color: '#5a7a9a' }}>Немає запланованих матчів</p>
             ) : upcoming.map(m => (
               <Link key={m.id} to={`/matches/${m.id}`}
-                className="flex items-center gap-3 p-3 rounded-xl border border-white/[0.04] hover:border-blue-500/20 hover:bg-blue-500/[0.05] transition-all"
+                className="flex items-center gap-3 p-3 rounded-xl transition-all"
+                style={{ border: '1px solid rgba(255,255,255,0.04)' }}
               >
                 <div className="text-right flex-1 min-w-0">
                   <span className="font-semibold text-sm text-white truncate block">{m.home_team?.name}</span>
                 </div>
-                <div className="px-2 py-1 rounded-lg text-xs font-bold shrink-0" style={{ background: 'rgba(59,130,246,0.15)', color: '#60a5fa' }}>
+                <div className="px-2 py-1 rounded-lg text-xs font-bold shrink-0" style={{ background: `${theme.accent}18`, color: theme.accent2 }}>
                   VS
                 </div>
                 <div className="flex-1 min-w-0">
@@ -120,7 +124,7 @@ export default function DashboardPage() {
                 </div>
                 <SportBadge sportName={m.sport?.name} icon={m.sport?.icon} />
                 <span className="text-xs shrink-0" style={{ color: '#5a7a9a' }}>
-                  {new Date(m.match_date).toLocaleDateString('uk-UA')}
+                  {formatUkrDate(m.match_date)}
                 </span>
               </Link>
             ))}
@@ -162,7 +166,7 @@ export default function DashboardPage() {
       <div className="glass-card p-6">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-base font-bold text-white">Останні прогнози</h2>
-          <Link to="/predictions" className="text-xs font-semibold hover:text-blue-300 transition-colors" style={{ color: '#3B82F6' }}>
+          <Link to="/predictions" className="text-xs font-semibold transition-colors" style={{ color: theme.accent2 }}>
             Всі прогнози →
           </Link>
         </div>
@@ -180,7 +184,7 @@ export default function DashboardPage() {
               {recentPreds.map(p => (
                 <tr key={p.id} className="dark-row" style={{ borderBottom: '1px solid rgba(148,200,255,0.04)' }}>
                   <td className="py-3">
-                    <Link to={`/matches/${p.match_id}`} className="font-medium text-blue-400 hover:text-blue-300 transition-colors">
+                    <Link to={`/matches/${p.match_id}`} className="font-medium transition-colors" style={{ color: theme.accent2 }}>
                       {p.match?.home_team?.name} vs {p.match?.away_team?.name}
                     </Link>
                   </td>
@@ -188,13 +192,13 @@ export default function DashboardPage() {
                   <td className="py-3">
                     <div className="flex items-center gap-2">
                       <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(148,200,255,0.1)' }}>
-                        <div className="h-full rounded-full" style={{ width: `${(p.confidence || 0) * 100}%`, background: 'linear-gradient(90deg, #3B82F6, #06B6D4)' }} />
+                        <div className="h-full rounded-full" style={{ width: `${(p.confidence || 0) * 100}%`, background: theme.gradient }} />
                       </div>
                       <span className="text-xs" style={{ color: '#5a7a9a' }}>{((p.confidence || 0) * 100).toFixed(0)}%</span>
                     </div>
                   </td>
                   <td className="py-3 text-xs" style={{ color: '#5a7a9a' }}>
-                    {new Date(p.created_at).toLocaleDateString('uk-UA')}
+                    {formatUkrDate(p.created_at)}
                   </td>
                 </tr>
               ))}
@@ -223,10 +227,10 @@ function ResultBadge({ result }) {
   );
 }
 
-function LoadingSpinner() {
+function LoadingSpinner({ accentColor = '#3B82F6' }) {
   return (
     <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(59,130,246,0.2)', borderTopColor: '#3B82F6' }} />
+      <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: `${accentColor}30`, borderTopColor: accentColor }} />
     </div>
   );
 }
