@@ -149,15 +149,23 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
+_settings = get_settings()
+_cors_origins = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
+    "http://localhost:3000",
+]
+if _settings.FRONTEND_URL and _settings.FRONTEND_URL not in _cors_origins:
+    _cors_origins.append(_settings.FRONTEND_URL)
+for _o in _settings.EXTRA_CORS_ORIGINS.split(","):
+    _o = _o.strip()
+    if _o and _o not in _cors_origins:
+        _cors_origins.append(_o)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:5175",
-        "http://localhost:3000",
-        "https://frontend-production-1532.up.railway.app",
-    ],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -195,7 +195,6 @@ async def create_prediction(
     return prediction
 
 
-@router.get("/", response_model=List[PredictionDetailResponse])
 @router.get("/my", response_model=List[PredictionDetailResponse])
 async def my_predictions(
     sport_id: int | None = Query(None),
@@ -213,6 +212,42 @@ async def my_predictions(
             selectinload(Prediction.match).selectinload(Match.season),
         )
         .where(Prediction.user_id == current_user.id)
+    )
+    if sport_id:
+        query = query.where(Prediction.match.has(Match.sport_id == sport_id))
+
+    result = await db.execute(
+        query.order_by(Prediction.created_at.desc()).offset(offset).limit(limit)
+    )
+    items = result.scalars().all()
+    for pred in items:
+        profile = get_sport_profile(pred.match.sport.name if pred.match and pred.match.sport else None)
+        pred.sport_name = pred.match.sport.name if pred.match and pred.match.sport else None
+        pred.sport_icon = profile.icon
+        pred.outcome_labels = {
+            "home_win": profile.home_label,
+            "away_win": profile.away_label,
+            "draw": "Нічия",
+        }
+    return items
+
+
+@router.get("/", response_model=List[PredictionDetailResponse])
+async def all_predictions(
+    sport_id: int | None = Query(None),
+    limit: int = Query(50, le=200),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    query = (
+        select(Prediction)
+        .options(
+            selectinload(Prediction.match).selectinload(Match.home_team),
+            selectinload(Prediction.match).selectinload(Match.away_team),
+            selectinload(Prediction.match).selectinload(Match.sport),
+            selectinload(Prediction.match).selectinload(Match.season),
+        )
     )
     if sport_id:
         query = query.where(Prediction.match.has(Match.sport_id == sport_id))

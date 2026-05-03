@@ -33,7 +33,7 @@ export default function PredictionsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Прогнози</h1>
+        <h1 className="text-5xl font-normal tracking-wider text-white uppercase" style={{ fontFamily: "var(--font-stat)" }}>Прогнози</h1>
         <span className="text-sm" style={{ color: '#5a7a9a' }}>{predictions.length} прогнозів</span>
       </div>
 

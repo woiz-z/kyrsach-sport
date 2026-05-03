@@ -48,7 +48,10 @@ export default function Layout() {
         </button>
       </header>
 
-      <main className="relative z-10 p-4 md:ml-64 md:p-8">
+      <main className="relative z-10 p-4 md:ml-64 md:p-8 min-h-screen"
+        style={{
+          background: `linear-gradient(180deg, transparent 0%, rgba(4,10,22,0.35) 100%)`,
+        }}>
         <Outlet />
       </main>
     </div>

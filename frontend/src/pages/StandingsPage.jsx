@@ -54,7 +54,7 @@ export default function StandingsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white">Турнірна таблиця</h1>
+          <h1 className="text-5xl font-normal tracking-wider text-white uppercase" style={{ fontFamily: "var(--font-stat)" }}>Турнірна таблиця</h1>
           <p className="text-sm mt-1" style={{ color: '#5a7a9a' }}>Поточне становище команд у сезоні</p>
         </div>
         {!seasonsLoading && seasons.length > 1 && (

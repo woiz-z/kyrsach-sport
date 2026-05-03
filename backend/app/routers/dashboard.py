@@ -57,6 +57,7 @@ async def dashboard_stats(
         upcoming_matches=upcoming,
         total_predictions=total_preds,
         correct_predictions=correct_preds,
+        resolved_predictions=resolved_preds,
         accuracy_percent=round(accuracy, 1),
         total_teams=total_teams,
         total_sports=total_sports,

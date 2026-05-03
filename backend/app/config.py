@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = ""
     FRONTEND_URL: str = "http://localhost:5173"
+    # Comma-separated extra CORS origins (e.g. Railway production URL)
+    EXTRA_CORS_ORIGINS: str = ""
     AVATAR_CACHE_DIR: str = "/var/cache/sportpredict/avatars"
 
     class Config:

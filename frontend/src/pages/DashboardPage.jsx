@@ -65,8 +65,12 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8 animate-float-up">
       <div>
-        <h1 className="text-3xl font-bold text-white">Дашборд</h1>
-        <p className="mt-1 text-sm" style={{ color: '#5a7a9a' }}>Огляд системи прогнозування SportPredict AI</p>
+        <h1 className="text-5xl font-normal tracking-wider text-white uppercase" style={{ fontFamily: 'var(--font-stat)' }}>
+          Дашборд
+        </h1>
+        <p className="mt-1 text-xs font-medium uppercase tracking-widest" style={{ color: '#4a6a8a' }}>
+          Огляд системи прогнозування SportPredict AI
+        </p>
       </div>
 
       {/* Stat Cards */}
@@ -75,21 +79,30 @@ export default function DashboardPage() {
           const rawVal = stats?.[card.key] ?? 0;
           const value = card.suffix ? `${rawVal}${card.suffix}` : rawVal;
           return (
-            <div key={card.key} className="stat-card p-5 flex flex-col gap-3">
+            <div key={card.key} className="stat-card p-5 flex flex-col gap-2 overflow-hidden relative">
+              {/* accent top border line */}
+              <div className="absolute top-0 left-0 right-0 h-[2px] rounded-t-2xl opacity-60"
+                style={{ background: theme.gradient }} />
               <div className="flex items-center justify-between">
                 <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: `${theme.accent}18`, boxShadow: `0 0 16px ${theme.glow}` }}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: `${theme.accent}15` }}
                 >
-                  <card.icon className="w-5 h-5" style={{ color: theme.accent2 }} />
+                  <card.icon className="w-4 h-4" style={{ color: theme.accent }} />
                 </div>
-                <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: `${theme.accent}18`, color: theme.accent2 }}>
+                <span className="text-[9px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
+                  style={{ background: `${theme.accent}18`, color: theme.accent }}>
                   live
                 </span>
               </div>
-              <div>
-                <p className="text-2xl font-bold text-white">{value}</p>
-                <p className="text-xs mt-0.5" style={{ color: '#5a7a9a' }}>{card.label}</p>
+              <div className="mt-1">
+                <p className="stat-number text-5xl font-normal text-white leading-none"
+                  style={{ textShadow: `0 0 30px ${theme.glow}` }}>
+                  {value}
+                </p>
+                <p className="text-[11px] font-medium mt-2 uppercase tracking-wider" style={{ color: '#4a6a8a' }}>
+                  {card.label}
+                </p>
               </div>
             </div>
           );

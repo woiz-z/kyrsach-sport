@@ -137,7 +137,7 @@ export default function LivePage() {
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-3xl font-bold text-white">Live матчі</h1>
+            <h1 className="text-5xl font-normal tracking-wider text-white uppercase" style={{ fontFamily: 'var(--font-stat)' }}>Live матчі</h1>
             <div
               className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold"
               style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)' }}

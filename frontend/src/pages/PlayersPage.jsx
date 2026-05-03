@@ -61,7 +61,7 @@ export default function PlayersPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Гравці</h1>
+        <h1 className="text-5xl font-normal tracking-wider text-white uppercase" style={{ fontFamily: "var(--font-stat)" }}>Гравці</h1>
         <span className="text-sm" style={{ color: '#3d6080' }}>{filtered.length} гравців</span>
       </div>
 

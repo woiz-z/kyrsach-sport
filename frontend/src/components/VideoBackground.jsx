@@ -181,18 +181,19 @@ export default function VideoBackground() {
         />
       </div>
 
-      {/* ── Overlay (semi-transparent, lets video show through) ─────── */}
+      {/* ── Overlay (darkens video for readability while keeping cinematic feel) */}
       <div
         className="absolute inset-0"
         style={{
           background: `
             linear-gradient(
               to bottom,
-              ${bg}cc 0%,
-              ${bg}55 20%,
-              ${bg}33 50%,
-              ${bg}55 80%,
-              ${bg}cc 100%
+              ${bg}f0 0%,
+              ${bg}aa 15%,
+              ${bg}77 40%,
+              ${bg}77 60%,
+              ${bg}aa 85%,
+              ${bg}f0 100%
             )
           `,
           transition: 'background 0.8s ease',

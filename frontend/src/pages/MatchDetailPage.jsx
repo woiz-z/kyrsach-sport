@@ -628,7 +628,7 @@ const ASSIST_TYPES = [
 const FOUL_REASONS = [
   [/handball/i, 'гру рукою'],
   [/dangerous play/i, 'небезпечну гру'],
-  [/bad foul/i, 'груб[а] порушення'],
+  [/bad foul/i, 'грубе порушення'],
   [/delaying the restart/i, 'затримку відновлення гри'],
   [/simulation/i, 'симуляцію'],
   [/unsporting behaviour/i, 'неспортивну поведінку'],

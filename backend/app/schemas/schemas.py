@@ -371,6 +371,7 @@ class DashboardStats(BaseModel):
     upcoming_matches: int
     total_predictions: int
     correct_predictions: int
+    resolved_predictions: int = 0
     accuracy_percent: float
     total_teams: int
     total_sports: int

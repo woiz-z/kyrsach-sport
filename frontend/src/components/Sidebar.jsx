@@ -70,11 +70,11 @@ function SportModeSwitcher({ onClose }) {
                 ? {
                     background: t.gradient,
                     boxShadow: `0 4px 14px ${t.glow}`,
-                    border: `1px solid ${t.accent2}40`,
+                    border: `1px solid ${t.accent2}50`,
                   }
                 : {
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.05)',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.09)',
                   }
               }
             >
@@ -96,7 +96,7 @@ function SportModeSwitcher({ onClose }) {
 function MiniAccuracyCard({ stats }) {
   const { theme } = useSportMode();
   const acc = stats?.accuracy_percent ?? null;
-  const total = stats?.total_predictions ?? 0;
+  const resolved = stats?.resolved_predictions ?? stats?.total_predictions ?? 0;
   const correct = stats?.correct_predictions ?? 0;
 
   return (
@@ -111,9 +111,11 @@ function MiniAccuracyCard({ stats }) {
       {acc !== null ? (
         <>
           <div className="flex items-end gap-1 mb-1.5">
-            <span className="text-2xl font-black text-white">{acc.toFixed(1)}</span>
-            <span className="text-sm font-bold mb-0.5" style={{ color: theme.accent }}>%</span>
-            <span className="text-[10px] ml-auto" style={{ color: '#5a7a9a' }}>точність</span>
+            <span className="stat-number text-4xl text-white" style={{ textShadow: `0 0 20px ${theme.glow}` }}>
+              {acc.toFixed(1)}
+            </span>
+            <span className="text-base font-bold mb-1" style={{ color: theme.accent }}>%</span>
+            <span className="text-[9px] ml-auto font-semibold uppercase tracking-wider" style={{ color: '#5a7a9a' }}>точність</span>
           </div>
           <div className="h-1.5 rounded-full overflow-hidden" style={{ background: `${theme.accent}18` }}>
             <div
@@ -123,7 +125,7 @@ function MiniAccuracyCard({ stats }) {
           </div>
           <div className="flex justify-between mt-1.5 text-[10px]" style={{ color: '#3d6080' }}>
             <span>{correct} вірних</span>
-            <span>{total} всього</span>
+            <span>{resolved} вирішених</span>
           </div>
         </>
       ) : (
@@ -165,7 +167,7 @@ export default function Sidebar({ open = false, onClose = () => {} }) {
       )}
       <aside
         className={`fixed left-0 top-0 z-50 flex h-screen w-64 flex-col transition-all duration-300 md:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
-        style={{ background: `${theme.bg}90`, backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRight: `1px solid ${theme.accent}20` }}
+        style={{ background: `${theme.bg}d8`, backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', borderRight: `1px solid ${theme.accent}25` }}
       >
         {/* Logo */}
         <div className="px-4 pt-5 pb-4" style={{ borderBottom: `1px solid ${theme.accent}10` }}>
@@ -192,10 +194,13 @@ export default function Sidebar({ open = false, onClose = () => {} }) {
               </span>
             </div>
             <div className="min-w-0">
-              <h1 className="brand-gradient-text text-[15px] font-black tracking-wide">SportPredict</h1>
+              <h1 className="brand-gradient-text text-[17px] font-black tracking-widest uppercase"
+                style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.08em' }}>
+                SportPredict
+              </h1>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <PulseDot />
-                <p className="text-[10px] font-semibold" style={{ color: theme.pulseDot }}>
+                <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: theme.pulseDot }}>
                   {SPORT_THEMES[activeSport]?.name}
                 </p>
               </div>

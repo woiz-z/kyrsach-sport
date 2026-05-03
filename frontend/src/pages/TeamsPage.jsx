@@ -36,7 +36,7 @@ export default function TeamsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Команди</h1>
+        <h1 className="text-5xl font-normal tracking-wider text-white uppercase" style={{ fontFamily: "var(--font-stat)" }}>Команди</h1>
       </div>
 
       <div className="relative max-w-sm">
